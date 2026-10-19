@@ -86,3 +86,6 @@ where id = '관리자-UUID-붙여넣기';
 ## 7. 무료 서비스 한계
 
 GitHub Pages는 정적 파일만 실행합니다. Supabase 무료 프로젝트의 제한과 일시중지 정책은 https://supabase.com/pricing 에서 확인하세요. 비용과 서비스 정책은 변경될 수 있습니다.
+
+
+로그인 비밀번호 설정 업데이트
