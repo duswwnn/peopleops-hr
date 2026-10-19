@@ -1,2 +1,2 @@
 import {authenticate,fail,json} from '../_lib/auth.js';
-export async function onRequestGet({request,env}){try{const user=await authenticate(request,env);if(user.role!=='admin')return json({error:'관리자만 조회할 수 있습니다.'},403);const r=await env.DB.prepare('SELECT id,email,display_name,role,active FROM hr_users ORDER BY email LIMIT 200').all();return json({rows:r.results});}catch(e){return fail(e);}}
+export async function onRequestGet({request,env}){try{await authenticate(request,env);return json({error:'공용 비밀번호 모드에서는 개인정보 보호를 위해 사용자 계정 목록 조회를 제공하지 않습니다.'},403);}catch(e){return fail(e);}}

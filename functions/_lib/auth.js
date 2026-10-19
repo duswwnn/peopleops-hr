@@ -1,33 +1,30 @@
-// Cloudflare Access JWT verification. Do not trust client-side login state or email headers.
-const b64url = s => { const t=s.replace(/-/g,'+').replace(/_/g,'/'); return Uint8Array.from(atob(t+'='.repeat((4-t.length%4)%4)),c=>c.charCodeAt(0)); };
-const decode = s => JSON.parse(new TextDecoder().decode(b64url(s)));
-let cache = {url:'',data:null,expires:0};
-export async function authenticate(request, env) {
-  const team = (env.ACCESS_TEAM_DOMAIN || '').replace(/^https?:\/\//,'').replace(/\/$/,'');
-  const aud = env.ACCESS_AUD;
-  if (!team || !aud || !env.DB) throw new Response('서버 인증 설정이 완료되지 않았습니다.',{status:503});
-  const token = request.headers.get('Cf-Access-Jwt-Assertion');
-  if (!token) throw new Response('Cloudflare Access 로그인이 필요합니다.',{status:401});
-  const parts=token.split('.'); if(parts.length!==3) throw new Response('잘못된 토큰입니다.',{status:401});
-  let h,p; try { h=decode(parts[0]);p=decode(parts[1]); }catch{throw new Response('잘못된 토큰입니다.',{status:401});}
-  if (!['RS256','ES256'].includes(h.alg)||!h.kid) throw new Response('지원되지 않는 토큰입니다.',{status:401});
-  const now=Math.floor(Date.now()/1000);
-  if (p.iss !== `https://${team}` || !(Array.isArray(p.aud)?p.aud.includes(aud):p.aud===aud) || !p.exp || p.exp<=now || (p.nbf&&p.nbf>now+60)) throw new Response('만료되었거나 유효하지 않은 로그인입니다.',{status:401});
-  const url=`https://${team}/cdn-cgi/access/certs`;
-  if (!cache.data||cache.url!==url||cache.expires<Date.now()) {
-    const res=await fetch(url);if(!res.ok)throw new Response('인증키 조회 실패',{status:503});
-    const obj=await res.json();cache={url,data:obj.keys,expires:Date.now()+300000};
-  }
-  const jwk=cache.data.find(x=>x.kid===h.kid);
-  if(!jwk)throw new Response('로그인 인증키가 유효하지 않습니다.',{status:401});
-  const key=await crypto.subtle.importKey('jwk',jwk,h.alg==='RS256'?{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'}:{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
-  const verified=await crypto.subtle.verify(h.alg==='RS256'?{name:'RSASSA-PKCS1-v1_5'}:{name:'ECDSA',hash:'SHA-256'},key,b64url(parts[2]),new TextEncoder().encode(parts[0]+'.'+parts[1]));
-  if(!verified)throw new Response('로그인 서명이 일치하지 않습니다.',{status:401});
-  const email=String(p.email||'').trim().toLowerCase();
-  if(!email)throw new Response('이메일 정보가 없습니다.',{status:403});
-  const user=await env.DB.prepare('SELECT id,email,display_name,role,active FROM hr_users WHERE email = ? COLLATE NOCASE').bind(email).first();
-  if(!user||user.active!==1)throw new Response('관리자 승인을 기다리는 계정입니다.',{status:403});
-  return user;
+// Shared-password session authentication for Cloudflare Pages Functions.
+const encoder = new TextEncoder();
+const bytes = s => encoder.encode(s);
+const b64url = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64 = s => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4)), x=>x.charCodeAt(0));
+const equal = (a,b) => { if(a.length!==b.length)return false;let z=0;for(let i=0;i<a.length;i++)z|=a[i]^b[i];return z===0; };
+async function hmacKey(env){if(!env.SESSION_SECRET||env.SESSION_SECRET.length<32)throw new Response('서버 세션 설정이 필요합니다.',{status:503});return crypto.subtle.importKey('raw',bytes(env.SESSION_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);}
+export async function sign(env,msg){return b64url(await crypto.subtle.sign('HMAC',await hmacKey(env),bytes(msg)));}
+export async function verifyPassword(env,pwd){
+ const expected=env.ADMIN_PASSWORD;
+ if(typeof expected!=='string'||expected.length<16)throw new Response('관리자 비밀번호 설정이 필요합니다.',{status:503});
+ // Fixed-length SHA-256 digest comparison. Secret is never delivered to the browser.
+ const digest=async text=>new Uint8Array(await crypto.subtle.digest('SHA-256',bytes(text)));
+ return equal(await digest(pwd),await digest(expected));
 }
-export function fail(e){const response=e instanceof Response?e:new Response('서버 처리 중 오류가 발생했습니다.',{status:500});return new Response(response.body,{status:response.status,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
-export function json(data,status=200){return Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
+export function cookieHeader(value,maxAge=28800){return `po_session=${value}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}`;}
+export async function createSession(env){const now=Math.floor(Date.now()/1000);const payload=b64url(bytes(JSON.stringify({iat:now,exp:now+28800,v:env.SESSION_VERSION||'1',n:b64url(crypto.getRandomValues(new Uint8Array(16)))})));return `${payload}.${await sign(env,payload)}`;}
+export async function authenticate(request,env){
+ if(!env.DB)throw new Response('D1 연결이 없습니다.',{status:503});
+ const raw=(request.headers.get('Cookie')||'').split(';').map(s=>s.trim()).find(x=>x.startsWith('po_session='));
+ if(!raw)throw new Response('로그인이 필요합니다.',{status:401});
+ const token=raw.slice('po_session='.length);const dot=token.lastIndexOf('.');if(dot<0)throw new Response('세션이 올바르지 않습니다.',{status:401});
+ const msg=token.slice(0,dot),sig=token.slice(dot+1);let obj;
+ try{if(!equal(unb64(sig),unb64(await sign(env,msg))))throw Error('signature');obj=JSON.parse(new TextDecoder().decode(unb64(msg)));}catch{throw new Response('세션이 올바르지 않습니다.',{status:401});}
+ const now=Math.floor(Date.now()/1000);
+ if(!obj.exp||obj.exp<=now||obj.iat>now+30||obj.exp-obj.iat>28800||obj.v!==(env.SESSION_VERSION||'1'))throw new Response('세션이 만료되었습니다. 다시 로그인하세요.',{status:401});
+ return {id:0,email:null,display_name:'관리자',role:'viewer',active:1};
+}
+export function fail(e){const r=e instanceof Response?e:new Response('서버 처리 중 오류가 발생했습니다.',{status:500});return new Response(r.body,{status:r.status,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
+export function json(data,status=200,headers={}){return Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});}
