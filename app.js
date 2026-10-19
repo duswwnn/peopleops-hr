@@ -1,7 +1,7 @@
 const $$=id=>document.getElementById(id);let me=null;let view='dashboard';
 function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function fetchJSON(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);return r.json();}
-function table(rows){if(!rows.length)return '<p class="muted">등록된 자료가 없습니다.</p>';const keys=Object.keys(rows[0]);return `<div class="panel"><table><thead><tr>${keys.map(k=>`<th>${escapeHTML(k)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${keys.map(k=>`<td>${escapeHTML(row[k])}</td>`).join('')}</tr>`).join('')}</tbody><tfoot>${footer}</tfoot></table></div>`;}
+function table(rows){if(!rows.length)return '<p class="muted">등록된 자료가 없습니다.</p>';const keys=Object.keys(rows[0]);return `<div class="panel"><table><thead><tr>${keys.map(k=>`<th>${escapeHTML(k)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${keys.map(k=>`<td>${escapeHTML(row[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
 async function load(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===v));const titles={dashboard:'종합 대시보드',employees:'직원 명부',certificates:'자격증',technical:'기술등급',licenses:'보유 면허',industries:'업종 등록',users:'인사팀 계정'};$$('title').textContent=titles[v];$$('body').textContent='자료를 조회하고 있습니다…';try{if(v==='dashboard'){const m=new Date().toISOString().slice(0,7);const d=await fetchJSON('/api/summary?month='+m);$$('body').innerHTML=`<div class="cards"><div class="card"><small>등록 직원</small><strong>${d.employees}명</strong></div><div class="card"><small>${escapeHTML(m)} 월말 재직</small><strong>${d.monthEnd}명</strong></div><div class="card"><small>입사</small><strong>${d.hires.length}명</strong></div><div class="card"><small>퇴사</small><strong>${d.leaves.length}명</strong></div></div><section><div class="toolbar"><label>조회 월 <input id="month" type="month" value="${m}"></label><button id="monthGo">조회</button></div><h3>입사자</h3><div id="hires">${table(d.hires)}</div><h3>퇴사자</h3><div id="leaves">${table(d.leaves)}</div></section>`;$$('monthGo').onclick=async()=>{try{const z=await fetchJSON('/api/summary?month='+$$('month').value);$$('hires').innerHTML=table(z.hires);$$('leaves').innerHTML=table(z.leaves);}catch(e){alert(e.message)}};return;}
 if(v==='users'){if(me.role!=='admin'){throw new Error('공용 비밀번호에서는 사용자 관리 기능이 비활성화되어 있습니다.')}const d=await fetchJSON('/api/admin-users');$$('body').innerHTML=table(d.rows);return;}
 if(v==='employees'){await showEmployeeDirectory();return;}
@@ -40,13 +40,19 @@ function drawDirectory(){
  const certMarks=(r,g)=>hasCert(r,g)?'○':'';
  // 직원별 보유 여부를 집계합니다. 자격증이 여러 건이어도 해당 등급은 1명으로 계산합니다.
  const hasGrade=(r,g)=>r.grades.some(x=>clean(x.grade).includes(g));
+ // 자격증 명칭을 우선하여 등급을 판별합니다.
+ // 산업기사에는 '기사'가 포함되므로 반드시 산업기사를 먼저 확인합니다.
  const certClass=(x)=>{
-  const raw=clean(x.certificate_level)||clean(x.certificate_name);
-  if(raw.includes('산업기사'))return '산업기사';
-  if(raw.includes('기능장'))return '기능장';
-  if(raw.includes('기술사'))return '기술사';
-  if(raw.includes('기사'))return '기사';
-  return '';
+  const name=clean(x.certificate_name).replace(/\s+/g,'');
+  const level=clean(x.certificate_level).replace(/\s+/g,'');
+  const classify=(s)=>{
+   if(s.includes('산업기사'))return '산업기사';
+   if(s.includes('기능장'))return '기능장';
+   if(s.includes('기술사'))return '기술사';
+   if(s.includes('기사'))return '기사';
+   return '';
+  };
+  return classify(name)||classify(level);
  };
  const certTypes=['산업기사','기사','기능장','기술사'];
  const hasCert=(r,g)=>r.certificates.some(x=>certClass(x)===g);
