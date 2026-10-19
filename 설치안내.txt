@@ -1,0 +1,9 @@
+PeopleOps 사업장 열 / 필터 수정
+
+1. GitHub duswwnn/peopleops-hr 저장소에서 Add file → Upload files 클릭
+2. 이 ZIP의 app.js, style.css 두 파일만 업로드(동일 파일명으로 교체)
+3. Commit changes → Cloudflare 자동배포 Success 확인
+4. 사이트 접속 → 직원명부 → 사업장 필터 확인
+
+기존 로그인·D1 API·DB는 변경하지 않습니다. 업종등록 데이터는 삭제하지 않고 조회 필터만 제거합니다.
+직원 직접등록과 엑셀 일괄 업로드는 이 패키지에 포함되지 않습니다.

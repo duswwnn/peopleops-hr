@@ -23,3 +23,5 @@
 /* Excel-like totals: pinned at the bottom of the scrollable roster */
 .excel-directory tfoot th,.excel-directory tfoot td{position:sticky;bottom:0;z-index:2;background:#d6e7d8!important;color:#1b3a29;font-weight:800;border-top:2px solid #668b73;box-shadow:0 -2px 3px #24392912}
 .excel-directory tfoot th{text-align:center}
+
+.excel-directory td.workplace-col{text-align:left;font-weight:650;white-space:nowrap}
