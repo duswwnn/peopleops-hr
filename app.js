@@ -58,14 +58,24 @@ function matchingTechnicalCertificateRows(rows,certificate=''){
  if(!selected)return rows;
  return rows.map(r=>({...r,certificates:(r.certificates||[]).filter(c=>clean(c.certificate_name)===selected)}));
 }
+// 직원명부: 입사일이 빠른 직원부터 표시하며 미입력자는 맨 아래로 배치합니다.
+function sortEmployeesByHireDate(rows){
+ return [...rows].sort((a,b)=>{
+  const ad=String(a.hire_date||'').trim(), bd=String(b.hire_date||'').trim();
+  if(!ad&&!bd)return 0;
+  if(!ad)return 1;
+  if(!bd)return -1;
+  return ad.localeCompare(bd);
+ });
+}
 function filterAllEmployees(rows,q='',site='',status=''){
  const today=new Date().toLocaleDateString('en-CA');
- return rows.filter(r=>{
+ return sortEmployeesByHireDate(rows.filter(r=>{
   if(q&&!String([r.employee_no,r.name,r.department,r.job_title].join(' ')).toLowerCase().includes(q))return false;
   if(site&&r.workplace!==site)return false;
   const active=(!r.hire_date||r.hire_date<=today)&&(!r.termination_date||r.termination_date>today);
   return !status||(status==='active'?active:!active&&!!r.termination_date&&r.termination_date<=today);
- });
+ }));
 }
 function drawDirectory(){
  const q=clean($$('dirSearch').value).toLowerCase();
@@ -260,7 +270,7 @@ async function exportPeopleOpsExcel(mode,filtered,button){
   const d=await fetchJSON('/api/directory');
   let rows=d.rows||[];
   if(mode==='employees'){
-   if(filtered)rows=filterAllEmployees(rows,clean($$('allSearch')?.value).toLowerCase(),$$('allWorkplace')?.value||'', $$('allStatus')?.value||'');
+   rows=filtered?filterAllEmployees(rows,clean($$('allSearch')?.value).toLowerCase(),$$('allWorkplace')?.value||'', $$('allStatus')?.value||''):sortEmployeesByHireDate(rows);
   }else{
    const q=filtered?clean($$('dirSearch')?.value).toLowerCase():'';
    const keys=['workplace','department','grade','field','certificate','license'];
