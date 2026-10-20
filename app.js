@@ -291,6 +291,15 @@ async function exportPeopleOpsExcel(mode,filtered,button){
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
  }catch(e){alert('엑셀 다운로드 실패: '+e.message)}finally{button.disabled=false;button.textContent=old;}
 }
+// 월말 재직 인원은 해당 월 마지막 날이 실제로 지난 경우에만 확정값으로 표시합니다.
+// 현재 월(진행 중) 및 미래 월은 비워 두며, 지난 연도의 12개월은 전부 표시합니다.
+function isCompletedMonth(year, month){
+ const today=new Date();
+ const end=new Date(Number(year),Number(month),0);
+ return end.getFullYear()<today.getFullYear() ||
+  (end.getFullYear()===today.getFullYear() && end.getMonth()<today.getMonth());
+}
+
 async function downloadTrendExcel(year,btn){
  if(!Number.isInteger(year))return;
  btn.disabled=true;const old=btn.textContent;btn.textContent='엑셀 생성 중…';
@@ -300,6 +309,7 @@ async function downloadTrendExcel(year,btn){
   const workplaces=new Map(work.months.map(r=>[Number(r.month),r]));
   const rows=total.months.map((r,i)=>{
    const w=workplaces.get(Number(r.month));if(!w)throw new Error('사업장 월별 자료가 누락됐습니다.');
+   if(!isCompletedMonth(year,Number(r.month)))return [r.month+'월','','','','','','',''];
    const prev=total.months[i-1];
    return [r.month+'월',Number(r.headcount)||0,Number(r.hires)||0,Number(r.leaves)||0,i?Number(r.headcount)-Number(prev.headcount):'',Number(w.osan)||0,Number(w.gwacheon)||0,Number(w.unassigned)||0];
   });
@@ -327,20 +337,21 @@ async function drawHeadcountTrend(year){
   if(!$$('trendChart')||view!=='dashboard')return;
   const months=data.months||[];
   if(months.length!==12)throw new Error('월별 데이터가 완전하지 않습니다.');
-  const max=Math.max(1,...months.map(d=>d.headcount));
+  const completed=months.filter(d=>isCompletedMonth(year,d.month));
+  const max=Math.max(1,...completed.map(d=>d.headcount));
   const width=840, height=260, left=43, right=20, top=29, bottom=42;
   const plotW=width-left-right, plotH=height-top-bottom;
   const x=(i)=>left+(i+.5)*plotW/12;
   const y=(n)=>top+plotH*(1-n/max);
-  const points=months.map((d,i)=>x(i)+','+y(d.headcount)).join(' ');
+  const points=months.map((d,i)=>isCompletedMonth(year,d.month)?x(i)+','+y(d.headcount):null).filter(Boolean).join(' ');
   const grid=[0,.25,.5,.75,1].map(t=>{
    const level=Math.round(max*t);const yy=y(max*t);
    return `<line x1="${left}" y1="${yy}" x2="${width-right}" y2="${yy}" stroke="#e5eaf0"/><text x="${left-8}" y="${yy+4}" text-anchor="end" font-size="12" fill="#64748b">${level}</text>`;
   }).join('');
   const labels=months.map((d,i)=>`<text x="${x(i)}" y="${height-18}" text-anchor="middle" font-size="12" fill="#475569">${d.month}월</text>`).join('');
-  const dots=months.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.headcount)}" r="5" fill="#A6A1DE"><title>${d.month}월 말 ${d.headcount}명</title></circle><text x="${x(i)}" y="${Math.max(13,y(d.headcount)-11)}" text-anchor="middle" font-size="12" fill="#142c49">${d.headcount}</text>`).join('');
-  const lines=months.map((d,i)=>`<tr><td>${d.month}월</td><td>${d.headcount}명</td><td>${d.hires}명</td><td>${d.leaves}명</td><td>${i===0?'–':((d.headcount-months[i-1].headcount)>0?'+':'')+(d.headcount-months[i-1].headcount)+'명'}</td></tr>`).join('');
-  target.innerHTML=`<div class="trend-scroll"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:240px;display:block" role="img" aria-label="${year}년 1월부터 12월까지 월말 재직 인원 꺾은선 그래프">${grid}<polyline points="${points}" fill="none" stroke="#A6A1DE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${labels}</svg></div><details class="trend-details"><summary>월별 인원 상세표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>월말 재직</th><th>입사</th><th>퇴사</th><th>전월 대비</th></tr></thead><tbody>${lines}</tbody></table></div></details><p class="trend-note">※ 월말 당일 퇴사한 직원도 해당 월의 월말 재직 인원에 포함합니다. 미래 월은 등록된 입·퇴사 예정일을 반영한 예상치입니다.</p>`;
+  const dots=months.map((d,i)=>!isCompletedMonth(year,d.month)?'':`<circle cx="${x(i)}" cy="${y(d.headcount)}" r="5" fill="#A6A1DE"><title>${d.month}월 말 ${d.headcount}명</title></circle><text x="${x(i)}" y="${Math.max(13,y(d.headcount)-11)}" text-anchor="middle" font-size="12" fill="#142c49">${d.headcount}</text>`).join('');
+  const lines=months.map((d,i)=>!isCompletedMonth(year,d.month)?`<tr><td>${d.month}월</td><td colspan="4" style="color:#94a3b8;text-align:center">미마감</td></tr>`:`<tr><td>${d.month}월</td><td>${d.headcount}명</td><td>${d.hires}명</td><td>${d.leaves}명</td><td>${i===0?'–':((d.headcount-months[i-1].headcount)>0?'+':'')+(d.headcount-months[i-1].headcount)+'명'}</td></tr>`).join('');
+  target.innerHTML=`<div class="trend-scroll"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:240px;display:block" role="img" aria-label="${year}년 1월부터 12월까지 월말 재직 인원 꺾은선 그래프">${grid}<polyline points="${points}" fill="none" stroke="#A6A1DE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${labels}</svg></div><details class="trend-details"><summary>월별 인원 상세표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>월말 재직</th><th>입사</th><th>퇴사</th><th>전월 대비</th></tr></thead><tbody>${lines}</tbody></table></div></details><p class="trend-note">※ 월말 당일 퇴사한 직원도 해당 월의 월말 재직 인원에 포함합니다. 현재 월과 미래 월의 월말 인원은 마감 전이므로 표시하지 않습니다.</p>`;
  }catch(e){if($$('trendChart'))$$('trendChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}
 }
 
@@ -356,7 +367,8 @@ async function drawWorkplaceTrend(year){
   if(view!=='dashboard'||!$$('workplaceChart')||Number($$('trendYear')?.value)!==year)return;
   const a=result.months||[];
   if(a.length!==12)throw new Error('월별 사업장 자료를 확인할 수 없습니다.');
-  const max=Math.max(1,...a.flatMap(d=>[d.osan,d.gwacheon]));
+  const completed=a.filter(d=>isCompletedMonth(year,d.month));
+  const max=Math.max(1,...completed.flatMap(d=>[d.osan,d.gwacheon]));
   const W=840,H=260,L=43,R=20,T=29,B=42,PW=W-L-R,PH=H-T-B;
   const x=i=>L+(i+.5)*PW/12;
   const y=n=>T+PH*(1-n/max);
@@ -365,13 +377,14 @@ async function drawWorkplaceTrend(year){
   const labels=a.map((d,i)=>`<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="12" fill="#475569">${d.month}월</text>`).join('');
   const curves=series.map(s=>{
    const labelDy=s.key==='osan'?-10:16;
-   return `<polyline points="${a.map((d,i)=>x(i)+','+y(d[s.key])).join(' ')}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${a.map((d,i)=>{
+   return `<polyline points="${a.map((d,i)=>isCompletedMonth(year,d.month)?x(i)+','+y(d[s.key]):null).filter(Boolean).join(' ')}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${a.map((d,i)=>{
+    if(!isCompletedMonth(year,d.month))return '';
     const cy=y(d[s.key]);
     const labelY=Math.max(14,Math.min(H-8,cy+labelDy));
     return `<circle cx="${x(i)}" cy="${cy}" r="4" fill="${s.color}"><title>${d.month}월 ${s.name} ${d[s.key]}명</title></circle><text x="${x(i)}" y="${labelY}" text-anchor="middle" font-size="12" font-weight="600" fill="${s.color}">${d[s.key]}</text>`;
    }).join('')}`;
   }).join('');
-  const rows=a.map(d=>`<tr><td>${d.month}월</td><td>${d.osan}명</td><td>${d.gwacheon}명</td></tr>`).join('');
+  const rows=a.map(d=>isCompletedMonth(year,d.month)?`<tr><td>${d.month}월</td><td>${d.osan}명</td><td>${d.gwacheon}명</td></tr>`:`<tr><td>${d.month}월</td><td colspan="2" style="color:#94a3b8;text-align:center">미마감</td></tr>`).join('');
   target.style.position='relative';
   target.innerHTML=`<div class="workplace-legend" style="position:absolute;top:-24px;right:0;margin:0;z-index:1"><span><i style="background:#A6A1DE"></i>오산본사</span><span><i style="background:#F3C58C"></i>과천지사</span></div><div class="trend-scroll"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:240px;display:block" role="img" aria-label="${year}년 오산본사와 과천지사의 월말 재직 인원 비교">${grid}${curves}${labels}</svg></div><details class="trend-details"><summary>사업장별 월별 인원표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>오산본사</th><th>과천지사</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
  }catch(e){if($$('workplaceChart'))$$('workplaceChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}
