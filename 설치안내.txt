@@ -1,9 +1,16 @@
-PeopleOps 사업장 열 / 필터 수정
+PeopleOps 월별 재직 인원 그래프 추가
 
-1. GitHub duswwnn/peopleops-hr 저장소에서 Add file → Upload files 클릭
-2. 이 ZIP의 app.js, style.css 두 파일만 업로드(동일 파일명으로 교체)
-3. Commit changes → Cloudflare 자동배포 Success 확인
-4. 사이트 접속 → 직원명부 → 사업장 필터 확인
+GitHub 저장소 peopleops-hr의 최상위에 app.js, style.css 두 파일을 교체합니다.
+새 functions/api/headcount-trend.js 파일은 하위 폴더 구조를 유지해 업로드합니다.
+기존 functions/_lib/auth.js 및 다른 API 파일은 변경하거나 삭제하지 않습니다.
+Commit 후 Cloudflare Pages의 Production 배포 성공 여부를 확인하세요.
+사이트 종합 대시보드에서 조회 연도를 변경하면 D1에서 1~12월 인원을 조회합니다.
 
-기존 로그인·D1 API·DB는 변경하지 않습니다. 업종등록 데이터는 삭제하지 않고 조회 필터만 제거합니다.
-직원 직접등록과 엑셀 일괄 업로드는 이 패키지에 포함되지 않습니다.
+계산 기준:
+- 월말 재직: 입사일이 월말 이하, 퇴사일이 없거나 월말 초과
+- 입사/퇴사: 각 해당 월의 날짜
+- 기준일 이후 미래 월은 저장된 예정일을 반영한 값
+- 등록 직원 중 입사일이 없는 경우는 월말 재직에서 제외
+- 그래프의 연도 선택 범위: 올해부터 과거 10년
+
+주의: 직원 실명, 비밀번호, SESSION_SECRET은 GitHub에 올리지 마세요.

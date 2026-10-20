@@ -33,3 +33,13 @@
 .excel-directory tbody tr.person-continuation td{background:#fafcff}
 .excel-directory .repeat-mark{color:#8b9aaa;font-size:12px}
 .excel-directory tbody tr.person-continuation td.certificate-col{font-weight:650}
+
+/* 월별 재직 인원 그래프 */
+.trend-panel{margin:16px 0;padding:22px;background:#fff;border:1px solid #dce4ed;border-radius:12px}
+.trend-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.trend-heading h3{margin:0 0 5px}.trend-heading p{margin:0}
+.trend-heading select{margin-left:8px;padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff}
+.trend-chart{margin-top:14px}.trend-scroll{overflow-x:auto}.trend-scroll svg{display:block;width:100%;min-width:620px;height:auto}
+.trend-details{margin-top:12px}.trend-details summary{cursor:pointer;color:#235a96;font-weight:600;padding:10px 0}
+.trend-table-scroll{overflow-x:auto}.trend-table-scroll table{width:100%;border-collapse:collapse}.trend-table-scroll th,.trend-table-scroll td{padding:8px 12px;text-align:center;border-bottom:1px solid #e5eaf0}
+.trend-note{font-size:12px;color:#64748b;line-height:1.6;margin:10px 0 0}
