@@ -2,7 +2,7 @@ const $$=id=>document.getElementById(id);let me=null;let view='dashboard';
 function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function fetchJSON(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);return r.json();}
 function table(rows){if(!rows.length)return '<p class="muted">등록된 자료가 없습니다.</p>';const keys=Object.keys(rows[0]);return `<div class="panel"><table><thead><tr>${keys.map(k=>`<th>${escapeHTML(k)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${keys.map(k=>`<td>${escapeHTML(row[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
-async function load(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===v));const titles={dashboard:'종합 대시보드',employees:'직원명부',technical_staff:'기술인력 보유현황표',certificates:'자격증',technical:'기술등급',licenses:'보유 면허',industries:'업종 등록',users:'인사팀 계정'};$$('title').textContent=titles[v];$$('body').textContent='자료를 조회하고 있습니다…';try{if(v==='dashboard'){const m=new Date().toISOString().slice(0,7);const d=await fetchJSON('/api/summary?month='+m);$$('body').innerHTML=`<div class="cards"><div class="card"><small>등록 직원</small><strong>${d.employees}명</strong></div><div class="card"><small>${escapeHTML(m)} 월말 재직</small><strong>${d.monthEnd}명</strong></div><div class="card"><small>입사</small><strong>${d.hires.length}명</strong></div><div class="card"><small>퇴사</small><strong>${d.leaves.length}명</strong></div></div><section class="trend-panel"><div class="trend-heading"><div><h3>월별 재직 인원 추이</h3><p class="muted">각 월 말일 기준 · 입사일과 퇴사일로 계산</p></div><label>조회 연도 <select id="trendYear"></select></label></div><div id="trendChart" class="trend-chart"><p class="muted">인원 추이를 불러오고 있습니다…</p></div></section><section><div class="toolbar"><label>조회 월 <input id="month" type="month" value="${m}"></label><button id="monthGo">조회</button></div><h3>입사자</h3><div id="hires">${table(d.hires)}</div><h3>퇴사자</h3><div id="leaves">${table(d.leaves)}</div></section>`;$$('monthGo').onclick=async()=>{try{const z=await fetchJSON('/api/summary?month='+$$('month').value);$$('hires').innerHTML=table(z.hires);$$('leaves').innerHTML=table(z.leaves);}catch(e){alert(e.message)}};await initHeadcountTrend();return;}
+async function load(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===v));const titles={dashboard:'종합 대시보드',employees:'직원명부',technical_staff:'기술인력 보유현황표',certificates:'자격증',technical:'기술등급',licenses:'보유 면허',industries:'업종 등록',users:'인사팀 계정'};$$('title').textContent=titles[v];$$('body').textContent='자료를 조회하고 있습니다…';try{if(v==='dashboard'){const m=new Date().toISOString().slice(0,7);const d=await fetchJSON('/api/summary?month='+m);$$('body').innerHTML=`<div class="cards"><div class="card"><small>등록 직원</small><strong>${d.employees}명</strong></div><div class="card"><small>${escapeHTML(m)} 월말 재직</small><strong>${d.monthEnd}명</strong></div><div class="card"><small>입사</small><strong>${d.hires.length}명</strong></div><div class="card"><small>퇴사</small><strong>${d.leaves.length}명</strong></div></div><div class="dashboard-chart-grid"><section class="trend-panel"><div class="trend-heading"><div><h3>월별 재직 인원 추이</h3><p class="muted">각 월 말일 기준 · 입사일과 퇴사일로 계산</p></div><label>조회 연도 <select id="trendYear"></select></label></div><div id="trendChart" class="trend-chart"><p class="muted">인원 추이를 불러오고 있습니다…</p></div></section><section class="trend-panel workplace-panel"><div class="trend-heading"><div><h3>사업장별 월말 재직 인원</h3><p class="muted">오산본사 · 과천지사 비교</p></div><span id="workplaceYearLabel" class="muted"></span></div><div id="workplaceChart" class="trend-chart"><p class="muted">사업장별 인원을 불러오는 중입니다…</p></div></section></div><section><div class="toolbar"><label>조회 월 <input id="month" type="month" value="${m}"></label><button id="monthGo">조회</button></div><h3>입사자</h3><div id="hires">${table(d.hires)}</div><h3>퇴사자</h3><div id="leaves">${table(d.leaves)}</div></section>`;$$('monthGo').onclick=async()=>{try{const z=await fetchJSON('/api/summary?month='+$$('month').value);$$('hires').innerHTML=table(z.hires);$$('leaves').innerHTML=table(z.leaves);}catch(e){alert(e.message)}};await initHeadcountTrend();return;}
 if(v==='users'){if(me.role!=='admin'){throw new Error('공용 비밀번호에서는 사용자 관리 기능이 비활성화되어 있습니다.')}const d=await fetchJSON('/api/admin-users');$$('body').innerHTML=table(d.rows);return;}
 if(v==='employees'){await showAllEmployees();return;}
 if(v==='technical_staff'){await showEmployeeDirectory();return;}
@@ -143,8 +143,8 @@ async function initHeadcountTrend(){
  if(!sel)return;
  const current=new Date().getFullYear();
  for(let y=current;y>=Math.max(2000,current-10);y--){const o=document.createElement('option');o.value=String(y);o.textContent=y+'년';sel.appendChild(o);}
- sel.onchange=()=>drawHeadcountTrend(Number(sel.value));
- await drawHeadcountTrend(current);
+ sel.onchange=()=>{drawHeadcountTrend(Number(sel.value));drawWorkplaceTrend(Number(sel.value));};
+ await Promise.all([drawHeadcountTrend(current),drawWorkplaceTrend(current)]);
 }
 async function drawHeadcountTrend(year){
  const target=$$('trendChart');
@@ -170,4 +170,29 @@ async function drawHeadcountTrend(year){
   const lines=months.map((d,i)=>`<tr><td>${d.month}월</td><td>${d.headcount}명</td><td>${d.hires}명</td><td>${d.leaves}명</td><td>${i===0?'–':((d.headcount-months[i-1].headcount)>0?'+':'')+(d.headcount-months[i-1].headcount)+'명'}</td></tr>`).join('');
   target.innerHTML=`<div class="trend-scroll"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${year}년 1월부터 12월까지 월말 재직 인원 꺾은선 그래프">${grid}<polyline points="${points}" fill="none" stroke="#235a96" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${labels}</svg></div><details class="trend-details"><summary>월별 인원 상세표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>월말 재직</th><th>입사</th><th>퇴사</th><th>전월 대비</th></tr></thead><tbody>${lines}</tbody></table></div></details><p class="trend-note">※ 말일에 퇴사한 직원은 그 달 월말 재직 인원에서 제외합니다. 미래 월은 등록된 입·퇴사 예정일을 반영한 예상치입니다.</p>`;
  }catch(e){if($$('trendChart'))$$('trendChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}
+}
+
+// 사업장별 12개월 월말 재직 인원 비교: 전체 직원명부에서 사업장+입퇴사일 기준
+async function drawWorkplaceTrend(year){
+ const target=$$('workplaceChart');
+ if(!target)return;
+ const yearLabel=$$('workplaceYearLabel');
+ if(yearLabel)yearLabel.textContent=year+'년';
+ target.innerHTML='<p class="muted">사업장별 인원을 불러오는 중입니다…</p>';
+ try {
+  const result=await fetchJSON('/api/workplace-trend?year='+year);
+  if(view!=='dashboard'||!$$('workplaceChart')||Number($$('trendYear')?.value)!==year)return;
+  const a=result.months||[];
+  if(a.length!==12)throw new Error('월별 사업장 자료를 확인할 수 없습니다.');
+  const max=Math.max(1,...a.flatMap(d=>[d.osan,d.gwacheon]));
+  const W=720,H=254,L=40,R=15,T=26,B=37,PW=W-L-R,PH=H-T-B;
+  const x=i=>L+(i+.5)*PW/12;
+  const y=n=>T+PH*(1-n/max);
+  const series=[{key:'osan',name:'오산본사',color:'#2563a6'},{key:'gwacheon',name:'과천지사',color:'#e48b36'}];
+  const grid=[0,.25,.5,.75,1].map(t=>`<line x1="${L}" y1="${y(max*t)}" x2="${W-R}" y2="${y(max*t)}" stroke="#e5eaf0"/><text x="${L-8}" y="${y(max*t)+4}" text-anchor="end" font-size="12" fill="#64748b">${Math.round(max*t)}</text>`).join('');
+  const labels=a.map((d,i)=>`<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="12" fill="#475569">${d.month}월</text>`).join('');
+  const curves=series.map(s=>`<polyline points="${a.map((d,i)=>x(i)+','+y(d[s.key])).join(' ')}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${a.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d[s.key])}" r="4" fill="${s.color}"><title>${d.month}월 ${s.name} ${d[s.key]}명</title></circle>`).join('')}`).join('');
+  const rows=a.map(d=>`<tr><td>${d.month}월</td><td>${d.osan}명</td><td>${d.gwacheon}명</td><td>${d.unassigned}명</td></tr>`).join('');
+  target.innerHTML=`<div class="workplace-legend"><span><i style="background:#2563a6"></i>오산본사</span><span><i style="background:#e48b36"></i>과천지사</span></div><div class="trend-scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${year}년 오산본사와 과천지사의 월말 재직 인원 비교">${grid}${curves}${labels}</svg></div><details class="trend-details"><summary>사업장별 월별 인원표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>오산본사</th><th>과천지사</th><th>사업장 미지정·기타</th></tr></thead><tbody>${rows}</tbody></table></div></details><p class="trend-note">※ 직원명부의 사업장을 기준으로 계산합니다. 사업장 미지정·기타 인원은 별도 표에서 확인할 수 있습니다.</p>`;
+ }catch(e){if($$('workplaceChart'))$$('workplaceChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}
 }

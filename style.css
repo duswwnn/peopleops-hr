@@ -51,3 +51,12 @@
 @media (max-width:640px){.trend-panel{max-width:100%;padding:12px}.trend-scroll{overflow-x:auto}.trend-scroll svg{width:620px;min-width:620px}}
 
 .all-staff-table{min-width:850px}.all-staff-table td,.all-staff-table th{white-space:nowrap;padding:10px}.all-employees .directory-filters{margin-top:14px}
+
+/* 종합 대시보드: 두 그래프를 같은 높이로 나란히 표시 */
+.dashboard-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:16px 0;align-items:start}
+.dashboard-chart-grid .trend-panel{margin:0;max-width:none;min-width:0;min-height:390px}
+.dashboard-chart-grid .trend-scroll svg{width:100%;max-width:none;min-width:0;height:auto}
+.workplace-legend{display:flex;gap:16px;justify-content:flex-end;flex-wrap:wrap;font-size:13px;color:#42526b;margin:8px 2px 0}
+.workplace-legend span{display:flex;gap:6px;align-items:center}.workplace-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+@media(max-width:1150px){.dashboard-chart-grid{grid-template-columns:1fr}.dashboard-chart-grid .trend-panel{min-height:0}}
+@media(max-width:640px){.dashboard-chart-grid .trend-scroll{overflow:auto}.dashboard-chart-grid .trend-scroll svg{width:620px;min-width:620px}}
