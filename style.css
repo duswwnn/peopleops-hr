@@ -153,3 +153,6 @@
 }
 .excel-directory td.mark { font-size: 20px; }
 .excel-directory .repeat-mark { font-size: 15px; }
+
+/* 대시보드 입사자·퇴사자 표만 글자 2px 확대 */
+#hires table, #leaves table { font-size: 17px; }
