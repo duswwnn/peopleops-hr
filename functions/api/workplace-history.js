@@ -35,7 +35,7 @@ export async function onRequestPost({request,env}){
   // D1 batch is transactionally executed: insertion and employee current location stay in sync.
   const operations=[
    env.DB.prepare('INSERT INTO workplace_transfers(employee_id,effective_date,from_workplace,to_workplace,notes) VALUES (?,?,?,?,?)').bind(id,date,prev,to,notes),
-   env.DB.prepare('UPDATE employees SET workplace=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND COALESCE(workplace,'')=?').bind(to,id,prev)
+   env.DB.prepare("UPDATE employees SET workplace=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND COALESCE(workplace,'')=?").bind(to,id,prev)
   ];
   await env.DB.batch(operations);
   return json({ok:true,employee_id:id,from_workplace:prev,to_workplace:to,effective_date:date});
