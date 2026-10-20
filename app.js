@@ -88,7 +88,7 @@ function drawDirectory(){
  const q=clean($$('dirSearch').value).toLowerCase();
  const keys=['workplace','department','grade','field','certificate','license'];
  const f=Object.fromEntries(keys.map(k=>[k,clean($$('dir_'+k).value)]));
- const filtered=matchingTechnicalCertificateRows(filterTechnicalEmployees(directoryRows,q,f),f.certificate);
+ const filtered=sortEmployeesByHireDate(matchingTechnicalCertificateRows(filterTechnicalEmployees(directoryRows,q,f),f.certificate));
  const marks=['산업기사','기사','기능사','기술사'];
  const hasGrade=(r,g)=>r.grades.some(x=>clean(x.grade).includes(g));
  const countCertificates=g=>filtered.reduce((n,r)=>n+r.certificates.filter(c=>certificateType(c)===g).length,0);
@@ -100,8 +100,9 @@ function drawDirectory(){
  const totalCerts=marks.map(countCertificates);
  const totalUniqueCerts=marks.map(uniqueCertPeople);
  const licensed=filtered.filter(r=>r.licenses.length>0).length;
- const footer=`<tr class="excel-total-row"><th colspan="4">합계 (직원 ${filtered.length}명 · 자격증 ${countAll}건)</th><td class="field-col">-</td>${totalGrades.map(n=>`<td>${n}명</td>`).join('')}<td>${countAll}건</td>${totalCerts.map(n=>`<td>${n}건</td>`).join('')}<td>${licensed}명</td></tr>`;
+ const footer=`<tr class="excel-total-row"><th colspan="4">합계 (직원 ${filtered.length}명 · 자격증 ${countAll}건)</th><td class="field-col"></td>${totalGrades.map(n=>`<td>${n}명</td>`).join('')}<td>${countAll}건</td>${totalCerts.map(n=>`<td>${n}건</td>`).join('')}<td>${licensed}명</td></tr>`;
  const gradeMarks=(r,g)=>hasGrade(r,g)?'○':'';
+ const technicalCell=(value)=>{const v=listText(value);return v?escapeHTML(v):'';};
  const makeRows=r=>{
   const certificates=r.certificates.length?r.certificates:[null];
   const span=certificates.length;
@@ -112,16 +113,16 @@ function drawDirectory(){
     const first=index===0;
     const type=cert?certificateType(cert):'';
     const common=first?`
-     <td class="workplace-col merged-person-cell"${rowspan}>${textOrDash(r.workplace)}</td>
-     <td class="dept-col merged-person-cell"${rowspan}>${textOrDash(r.department)}</td>
-     <td class="merged-person-cell"${rowspan}>${textOrDash(r.job_title)}</td>
+     <td class="workplace-col merged-person-cell"${rowspan}>${technicalCell(r.workplace)}</td>
+     <td class="dept-col merged-person-cell"${rowspan}>${technicalCell(r.department)}</td>
+     <td class="merged-person-cell"${rowspan}>${technicalCell(r.job_title)}</td>
      <td class="name-col merged-person-cell"${rowspan}><button type="button" class="employee-link" data-edit-id="${r.id}">${escapeHTML(r.name)}</button></td>
      <td class="field-col merged-person-cell"${rowspan}>${escapeHTML([...new Set(r.grades.map(x=>clean(x.technical_field)).filter(Boolean))].join(' / '))}</td>
      ${gradeOrder.map(g=>`<td class="mark merged-person-cell"${rowspan}>${gradeMarks(r,g)}</td>`).join('')}`:'';
-    const license=first?`<td class="license-col merged-person-cell"${rowspan}>${textOrDash([...new Set(r.licenses.map(x=>x.license_type).map(clean).filter(Boolean))].join(' / '))}</td>`:'';
+    const license=first?`<td class="license-col merged-person-cell"${rowspan}>${technicalCell([...new Set(r.licenses.map(x=>x.license_type).map(clean).filter(Boolean))].join(' / '))}</td>`:'';
     return `<tr data-emp-id="${r.id}" class="${first?'person-first':'person-continuation'}">
      ${common}
-     <td class="certificate-col">${cert?escapeHTML(cert.certificate_name):'<span class="dim">-</span>'}</td>
+     <td class="certificate-col">${cert?escapeHTML(cert.certificate_name):''}</td>
      ${marks.map(g=>`<td class="mark">${type===g?'○':''}</td>`).join('')}
      ${license}
     </tr>`;
@@ -289,7 +290,7 @@ async function exportPeopleOpsExcel(mode,filtered,button){
    const q=filtered?clean($$('dirSearch')?.value).toLowerCase():'';
    const keys=['workplace','department','grade','field','certificate','license'];
    const f=Object.fromEntries(keys.map(k=>[k,filtered?clean($$('dir_'+k)?.value):'']));
-   rows=matchingTechnicalCertificateRows(filterTechnicalEmployees(rows,q,f),f.certificate);
+   rows=sortEmployeesByHireDate(matchingTechnicalCertificateRows(filterTechnicalEmployees(rows,q,f),f.certificate));
   }
   const {title,headers,records}=peopleOpsExcelRows(mode,rows);
   const blob=createPeopleOpsWorkbook(title,headers,records);
