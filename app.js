@@ -9,7 +9,7 @@ if(v==='technical_staff'){await showEmployeeDirectory();return;}
 
 const d=await fetchJSON('/api/data?table='+encodeURIComponent(v));$$('body').innerHTML=`<p class="muted">조회 결과: ${d.rows.length}건 (최대 500건)</p>`+table(d.rows);
 }catch(e){$$('body').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}}
-async function initApp(){try{const d=await fetchJSON('/api/me');me=d.user;$$('login').hidden=true;$$('shell').hidden=false;$$('identity').textContent='';document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>load(b.dataset.view);if(b.dataset.view==='users')b.hidden=true});await load('dashboard');}catch(e){$$('shell').hidden=true;$$('login').hidden=false;$$('loginerror').textContent='';}}
+async function initApp(){try{const d=await fetchJSON('/api/me');me=d.user;$$('login').hidden=true;$$('shell').hidden=false;$$('identity').textContent='관리자 로그인';document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>load(b.dataset.view);if(b.dataset.view==='users')b.hidden=true});await load('dashboard');}catch(e){$$('shell').hidden=true;$$('login').hidden=false;$$('loginerror').textContent='';}}
 $$('loginform').addEventListener('submit',async e=>{e.preventDefault();$$('loginerror').textContent='';const btn=$$('loginbutton');btn.disabled=true;try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({username:$$('username').value,password:$$('password').value})});const d=await r.json();if(!r.ok)throw new Error(d.error||'로그인 실패');$$('password').value='';await initApp();}catch(err){$$('loginerror').textContent=err.message;}finally{btn.disabled=false;}});
 $$('logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST',credentials:'same-origin'});location.reload();});
 initApp();
@@ -29,8 +29,16 @@ function certificateType(x){
  const type=(t)=>t.includes('산업기사')?'산업기사':t.includes('기능장')?'기능장':t.includes('기술사')?'기술사':t.endsWith('기사')?'기사':'';
  return type(s)||type(fallback);
 }
+function isDepartedEmployee(r){
+ const termination=clean(r.termination_date).slice(0,10);
+ // 퇴사일 당일부터 기술인력 보유현황표에서는 제외합니다.
+ const today=new Date().toLocaleDateString('en-CA');
+ return /^\d{4}-\d{2}-\d{2}$/.test(termination)&&termination<=today;
+}
 function filterTechnicalEmployees(rows,q='',f={}){
  return rows.filter(r=>{
+  // 기술인력 표는 재직자만 조회합니다. 직원명부와 D1 원본은 변경하지 않습니다.
+  if(isDepartedEmployee(r))return false;
   if(!r.certificates?.length&&!r.grades?.length&&!r.licenses?.length)return false;
   const words=[r.employee_no,r.name,r.department,r.workplace,r.job_title,...(r.grades||[]).map(x=>x.technical_field+' '+x.grade),...(r.certificates||[]).map(x=>x.certificate_name+' '+x.certificate_level),...(r.licenses||[]).map(x=>x.license_type),...(r.industries||[]).map(x=>x.industry_name)].join(' ').toLowerCase();
   if(q&&!words.includes(q))return false;
@@ -58,7 +66,7 @@ function drawDirectory(){
  const uniqueCertPeople=g=>filtered.filter(r=>r.certificates.some(c=>certificateType(c)===g)).length;
  const countAll=filtered.reduce((n,r)=>n+r.certificates.length,0);
  const physicalRows=filtered.reduce((n,r)=>n+Math.max(1,r.certificates.length),0);
- $$('dirCount').textContent=`조회 직원 ${filtered.length}명 / 전체 기술인력 ${directoryRows.filter(r=>r.certificates?.length||r.grades?.length||r.licenses?.length).length}명 · 표시 자격증 ${countAll}건`;
+ $$('dirCount').textContent=`조회 직원 ${filtered.length}명 / 전체 기술인력 ${filterTechnicalEmployees(directoryRows).length}명 · 표시 자격증 ${countAll}건`;
  const totalGrades=gradeOrder.map(g=>filtered.filter(r=>hasGrade(r,g)).length);
  const totalCerts=marks.map(countCertificates);
  const totalUniqueCerts=marks.map(uniqueCertPeople);
@@ -288,7 +296,7 @@ async function drawHeadcountTrend(year){
    const level=Math.round(max*t);const yy=y(max*t);
    return `<line x1="${left}" y1="${yy}" x2="${width-right}" y2="${yy}" stroke="#e5eaf0"/><text x="${left-8}" y="${yy+4}" text-anchor="end" font-size="12" fill="#64748b">${level}</text>`;
   }).join('');
-  const labels=months.map((d,i)=>`<text x="${x(i)}" y="${height-18}" text-anchor="middle" font-size="16" fill="#475569">${d.month}월</text>`).join('');
+  const labels=months.map((d,i)=>`<text x="${x(i)}" y="${height-18}" text-anchor="middle" font-size="12" fill="#475569">${d.month}월</text>`).join('');
   const dots=months.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.headcount)}" r="5" fill="#A6A1DE"><title>${d.month}월 말 ${d.headcount}명</title></circle><text x="${x(i)}" y="${Math.max(13,y(d.headcount)-11)}" text-anchor="middle" font-size="12" fill="#142c49">${d.headcount}</text>`).join('');
   const lines=months.map((d,i)=>`<tr><td>${d.month}월</td><td>${d.headcount}명</td><td>${d.hires}명</td><td>${d.leaves}명</td><td>${i===0?'–':((d.headcount-months[i-1].headcount)>0?'+':'')+(d.headcount-months[i-1].headcount)+'명'}</td></tr>`).join('');
   target.innerHTML=`<div class="trend-scroll"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width:100%;height:240px;display:block" role="img" aria-label="${year}년 1월부터 12월까지 월말 재직 인원 꺾은선 그래프">${grid}<polyline points="${points}" fill="none" stroke="#A6A1DE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${labels}</svg></div><details class="trend-details"><summary>월별 인원 상세표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>월말 재직</th><th>입사</th><th>퇴사</th><th>전월 대비</th></tr></thead><tbody>${lines}</tbody></table></div></details><p class="trend-note">※ 말일에 퇴사한 직원은 그 달 월말 재직 인원에서 제외합니다. 미래 월은 등록된 입·퇴사 예정일을 반영한 예상치입니다.</p>`;
@@ -313,7 +321,7 @@ async function drawWorkplaceTrend(year){
   const y=n=>T+PH*(1-n/max);
   const series=[{key:'osan',name:'오산본사',color:'#A6A1DE'},{key:'gwacheon',name:'과천지사',color:'#F3C58C'}];
   const grid=[0,.25,.5,.75,1].map(t=>`<line x1="${L}" y1="${y(max*t)}" x2="${W-R}" y2="${y(max*t)}" stroke="#e5eaf0"/><text x="${L-8}" y="${y(max*t)+4}" text-anchor="end" font-size="12" fill="#64748b">${Math.round(max*t)}</text>`).join('');
-  const labels=a.map((d,i)=>`<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="16" fill="#475569">${d.month}월</text>`).join('');
+  const labels=a.map((d,i)=>`<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="12" fill="#475569">${d.month}월</text>`).join('');
   const curves=series.map(s=>{
    const labelDy=s.key==='osan'?-10:16;
    return `<polyline points="${a.map((d,i)=>x(i)+','+y(d[s.key])).join(' ')}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${a.map((d,i)=>{
