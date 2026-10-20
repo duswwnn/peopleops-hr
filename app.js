@@ -109,7 +109,7 @@ function drawDirectory(){
      <td class="dept-col merged-person-cell"${rowspan}>${textOrDash(r.department)}</td>
      <td class="merged-person-cell"${rowspan}>${textOrDash(r.job_title)}</td>
      <td class="name-col merged-person-cell"${rowspan}><button type="button" class="employee-link" data-edit-id="${r.id}">${escapeHTML(r.name)}</button></td>
-     <td class="field-col merged-person-cell"${rowspan}>${textOrDash([...new Set(r.grades.map(x=>clean(x.technical_field)).filter(Boolean))].join(' / '))}</td>
+     <td class="field-col merged-person-cell"${rowspan}>${escapeHTML([...new Set(r.grades.map(x=>clean(x.technical_field)).filter(Boolean))].join(' / '))}</td>
      ${gradeOrder.map(g=>`<td class="mark merged-person-cell"${rowspan}>${gradeMarks(r,g)}</td>`).join('')}`:'';
     const license=first?`<td class="license-col merged-person-cell"${rowspan}>${textOrDash([...new Set(r.licenses.map(x=>x.license_type).map(clean).filter(Boolean))].join(' / '))}</td>`:'';
     return `<tr data-emp-id="${r.id}" class="${first?'person-first':'person-continuation'}">
