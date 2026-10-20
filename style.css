@@ -60,3 +60,13 @@
 .workplace-legend span{display:flex;gap:6px;align-items:center}.workplace-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
 @media(max-width:1150px){.dashboard-chart-grid{grid-template-columns:1fr}.dashboard-chart-grid .trend-panel{min-height:0}}
 @media(max-width:640px){.dashboard-chart-grid .trend-scroll{overflow:auto}.dashboard-chart-grid .trend-scroll svg{width:620px;min-width:620px}}
+
+/* dashboard excel export */
+.trend-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.export-excel{padding:8px 12px;border:1px solid #b9d3c5;border-radius:7px;background:#f2faf5;color:#155c36;font-size:13px}.export-excel:hover{background:#e4f5e9}.export-excel:disabled{opacity:.6}
+
+/* 월별 재직 / 사업장별 재직 카드 크기 통일 */
+.dashboard-chart-grid { align-items: stretch; }
+.dashboard-chart-grid > .trend-panel { height: 100%; min-height: 430px; box-sizing: border-box; }
+@media (max-width:1150px) {
+  .dashboard-chart-grid > .trend-panel { height: auto; min-height: 390px; }
+}
