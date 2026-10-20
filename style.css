@@ -43,3 +43,9 @@
 .trend-details{margin-top:12px}.trend-details summary{cursor:pointer;color:#235a96;font-weight:600;padding:10px 0}
 .trend-table-scroll{overflow-x:auto}.trend-table-scroll table{width:100%;border-collapse:collapse}.trend-table-scroll th,.trend-table-scroll td{padding:8px 12px;text-align:center;border-bottom:1px solid #e5eaf0}
 .trend-note{font-size:12px;color:#64748b;line-height:1.6;margin:10px 0 0}
+
+/* 종합 대시보드: 월별 재직 인원 그래프 컴팩트 크기 */
+.trend-panel{max-width:780px;padding:16px 18px}
+.trend-chart{margin-top:8px}
+.trend-scroll svg{width:100%;max-width:720px;min-width:0;height:auto}
+@media (max-width:640px){.trend-panel{max-width:100%;padding:12px}.trend-scroll{overflow-x:auto}.trend-scroll svg{width:620px;min-width:620px}}
