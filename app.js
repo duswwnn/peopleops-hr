@@ -2,7 +2,7 @@ const $$=id=>document.getElementById(id);let me=null;let view='dashboard';
 function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function fetchJSON(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);return r.json();}
 function table(rows){if(!rows.length)return '<p class="muted">등록된 자료가 없습니다.</p>';const keys=Object.keys(rows[0]);return `<div class="panel"><table><thead><tr>${keys.map(k=>`<th>${escapeHTML(k)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${keys.map(k=>`<td>${escapeHTML(row[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
-async function load(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===v));const titles={dashboard:'종합 대시보드',employees:'직원명부',technical_staff:'기술인력 보유현황표',certificates:'자격증',technical:'기술등급',licenses:'보유 면허',industries:'업종 등록',users:'인사팀 계정'};$$('title').textContent=titles[v];$$('body').textContent='자료를 조회하고 있습니다…';try{if(v==='dashboard'){const m=new Date().toISOString().slice(0,7);const d=await fetchJSON('/api/summary?month='+m);$$('body').innerHTML=`<div class="cards"><div class="card"><small>등록 직원</small><strong>${d.employees}명</strong></div><div class="card"><small>${escapeHTML(m)} 월말 재직</small><strong>${d.monthEnd}명</strong></div><div class="card"><small>입사</small><strong>${d.hires.length}명</strong></div><div class="card"><small>퇴사</small><strong>${d.leaves.length}명</strong></div></div><div class="dashboard-chart-grid"><section class="trend-panel"><div class="trend-heading"><div><h3>월별 재직 인원 추이</h3><p class="muted">각 월 말일 기준 · 입사일과 퇴사일로 계산</p></div><label>조회 연도 <select id="trendYear"></select></label></div><div id="trendChart" class="trend-chart"><p class="muted">인원 추이를 불러오고 있습니다…</p></div></section><section class="trend-panel workplace-panel"><div class="trend-heading"><div><h3>사업장별 월말 재직 인원</h3><p class="muted">오산본사 · 과천지사 비교</p></div><span id="workplaceYearLabel" class="muted"></span></div><div id="workplaceChart" class="trend-chart"><p class="muted">사업장별 인원을 불러오는 중입니다…</p></div></section></div><section><div class="toolbar"><label>조회 월 <input id="month" type="month" value="${m}"></label><button id="monthGo">조회</button></div><h3>입사자</h3><div id="hires">${table(d.hires)}</div><h3>퇴사자</h3><div id="leaves">${table(d.leaves)}</div></section>`;$$('monthGo').onclick=async()=>{try{const z=await fetchJSON('/api/summary?month='+$$('month').value);$$('hires').innerHTML=table(z.hires);$$('leaves').innerHTML=table(z.leaves);}catch(e){alert(e.message)}};await initHeadcountTrend();return;}
+async function load(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===v));const titles={dashboard:'종합 대시보드',employees:'직원명부',technical_staff:'기술인력 보유현황표',certificates:'자격증',technical:'기술등급',licenses:'보유 면허',industries:'업종 등록',users:'인사팀 계정'};$$('title').textContent=titles[v];$$('body').textContent='자료를 조회하고 있습니다…';try{if(v==='dashboard'){const m=new Date().toISOString().slice(0,7);const d=await fetchJSON('/api/summary?month='+m);$$('body').innerHTML=`<div class="cards"><div class="card"><small>등록 직원</small><strong>${d.employees}명</strong></div><div class="card"><small>${escapeHTML(m)} 월말 재직</small><strong>${d.monthEnd}명</strong></div><div class="card"><small>입사</small><strong>${d.hires.length}명</strong></div><div class="card"><small>퇴사</small><strong>${d.leaves.length}명</strong></div></div><div class="dashboard-chart-grid"><section class="trend-panel"><div class="trend-heading"><div><h3>월별 재직 인원 추이</h3><p class="muted">각 월 말일 기준 · 입사일과 퇴사일로 계산</p></div><div class="trend-actions"><label>조회 연도 <select id="trendYear"></select></label><button type="button" id="downloadTrendExcel" class="export-excel">엑셀 다운로드 (.xlsx)</button></div></div><div id="trendChart" class="trend-chart"><p class="muted">인원 추이를 불러오고 있습니다…</p></div></section><section class="trend-panel workplace-panel"><div class="trend-heading"><div><h3>사업장별 월말 재직 인원</h3><p class="muted">오산본사 · 과천지사 비교</p></div><span id="workplaceYearLabel" class="muted"></span></div><div id="workplaceChart" class="trend-chart"><p class="muted">사업장별 인원을 불러오는 중입니다…</p></div></section></div><section><div class="toolbar"><label>조회 월 <input id="month" type="month" value="${m}"></label><button id="monthGo">조회</button></div><h3>입사자</h3><div id="hires">${table(d.hires)}</div><h3>퇴사자</h3><div id="leaves">${table(d.leaves)}</div></section>`;$$('monthGo').onclick=async()=>{try{const z=await fetchJSON('/api/summary?month='+$$('month').value);$$('hires').innerHTML=table(z.hires);$$('leaves').innerHTML=table(z.leaves);}catch(e){alert(e.message)}};await initHeadcountTrend();return;}
 if(v==='users'){if(me.role!=='admin'){throw new Error('공용 비밀번호에서는 사용자 관리 기능이 비활성화되어 있습니다.')}const d=await fetchJSON('/api/admin-users');$$('body').innerHTML=table(d.rows);return;}
 if(v==='employees'){await showAllEmployees();return;}
 if(v==='technical_staff'){await showEmployeeDirectory();return;}
@@ -29,17 +29,29 @@ function certificateType(x){
  const type=(t)=>t.includes('산업기사')?'산업기사':t.includes('기능장')?'기능장':t.includes('기술사')?'기술사':t.endsWith('기사')?'기사':'';
  return type(s)||type(fallback);
 }
+function filterTechnicalEmployees(rows,q='',f={}){
+ return rows.filter(r=>{
+  if(!r.certificates?.length&&!r.grades?.length&&!r.licenses?.length)return false;
+  const words=[r.employee_no,r.name,r.department,r.workplace,r.job_title,...(r.grades||[]).map(x=>x.technical_field+' '+x.grade),...(r.certificates||[]).map(x=>x.certificate_name+' '+x.certificate_level),...(r.licenses||[]).map(x=>x.license_type),...(r.industries||[]).map(x=>x.industry_name)].join(' ').toLowerCase();
+  if(q&&!words.includes(q))return false;
+  const has=(arr,key,v)=>!v||(arr||[]).some(item=>clean(item[key]).includes(v));
+  return (!f.workplace||r.workplace===f.workplace)&&(!f.department||r.department===f.department)&&has(r.grades,'grade',f.grade)&&has(r.grades,'technical_field',f.field)&&has(r.certificates,'certificate_name',f.certificate)&&has(r.licenses,'license_type',f.license);
+ });
+}
+function filterAllEmployees(rows,q='',site='',status=''){
+ const today=new Date().toLocaleDateString('en-CA');
+ return rows.filter(r=>{
+  if(q&&!String([r.employee_no,r.name,r.department,r.job_title].join(' ')).toLowerCase().includes(q))return false;
+  if(site&&r.workplace!==site)return false;
+  const active=(!r.hire_date||r.hire_date<=today)&&(!r.termination_date||r.termination_date>today);
+  return !status||(status==='active'?active:!active&&!!r.termination_date&&r.termination_date<=today);
+ });
+}
 function drawDirectory(){
  const q=clean($$('dirSearch').value).toLowerCase();
  const keys=['workplace','department','grade','field','certificate','license'];
  const f=Object.fromEntries(keys.map(k=>[k,clean($$('dir_'+k).value)]));
- const filtered=directoryRows.filter(r=>{
-  if(!r.certificates?.length && !r.grades?.length && !r.licenses?.length)return false;
-  const words=[r.employee_no,r.name,r.department,r.workplace,r.job_title,...r.grades.map(x=>x.technical_field+' '+x.grade),...r.certificates.map(x=>x.certificate_name+' '+x.certificate_level),...r.licenses.map(x=>x.license_type),...r.industries.map(x=>x.industry_name)].join(' ').toLowerCase();
-  if(q&&!words.includes(q))return false;
-  const has=(array,key,value)=>!value||array.some(item=>clean(item[key]).includes(value));
-  return (!f.workplace||r.workplace===f.workplace)&&(!f.department||r.department===f.department)&&has(r.grades,'grade',f.grade)&&has(r.grades,'technical_field',f.field)&&has(r.certificates,'certificate_name',f.certificate)&&has(r.licenses,'license_type',f.license);
- });
+ const filtered=filterTechnicalEmployees(directoryRows,q,f);
  const marks=['산업기사','기사','기능장','기술사'];
  const hasGrade=(r,g)=>r.grades.some(x=>clean(x.grade).includes(g));
  const countCertificates=g=>filtered.reduce((n,r)=>n+r.certificates.filter(c=>certificateType(c)===g).length,0);
@@ -76,31 +88,30 @@ function drawDirectory(){
 async function showEmployeeDirectory(){
  const data=await fetchJSON('/api/directory');directoryRows=data.rows||[];
  const fields=[['workplace','사업장',r=>[r.workplace]],['department','부서',r=>[r.department]],['grade','기술등급',r=>r.grades.map(x=>x.grade)],['field','기술분야',r=>r.grades.map(x=>x.technical_field)],['certificate','국가기술자격',r=>r.certificates.map(x=>x.certificate_name)],['license','등록 면허',r=>r.licenses.map(x=>x.license_type)]];
- $$('body').innerHTML=`<section class="directory"><div class="directory-head"><div><h2>기술인력 보유현황표</h2><p class="muted">엑셀형 2단 제목 · 자격증별 개별 행 · 실시간 D1 조회</p></div><div class="directory-actions"><button id="dirReset" type="button">필터 초기화</button></div></div><div class="directory-filters"><label class="directory-search">통합검색<input id="dirSearch" type="search" placeholder="성명·부서·자격증·면허 검색"></label>${fields.map(([k,label,getter])=>controlSelect('dir_'+k,label,k==='workplace'?['오산본사','과천지사']:uniqOpts(directoryRows,getter))).join('')}</div><p class="muted" id="dirCount"></p><div id="dirResult"></div><p class="muted tiny">좌우로 스크롤하여 모든 열을 확인할 수 있습니다. '○'는 해당 등급의 보유 기록을 뜻합니다. 맨 아래 기술등급 합계는 직원 수(명), 자격증 등급 합계는 실제 자격증 개수(건)로 계산합니다. 한 사람이 서로 다른 등급을 가진 경우 각 등급에 각각 포함됩니다. 등록 면허 열에는 면허·업종등록 내역을 함께 표시합니다. 개인정보가 담긴 엑셀은 GitHub에 올리지 마세요.</p></section>`;
+ $$('body').innerHTML=`<section class="directory"><div class="directory-head"><div><h2>기술인력 보유현황표</h2><p class="muted">엑셀형 2단 제목 · 자격증별 개별 행 · 실시간 D1 조회</p></div><div class="directory-actions"><button id="dirReset" type="button">필터 초기화</button><button id="dirExportAll" type="button" class="export-excel">전체 엑셀 다운로드</button><button id="dirExportFiltered" type="button" class="export-excel">조회 결과 다운로드</button></div></div><div class="directory-filters"><label class="directory-search">통합검색<input id="dirSearch" type="search" placeholder="성명·부서·자격증·면허 검색"></label>${fields.map(([k,label,getter])=>controlSelect('dir_'+k,label,k==='workplace'?['오산본사','과천지사']:uniqOpts(directoryRows,getter))).join('')}</div><p class="muted" id="dirCount"></p><div id="dirResult"></div><p class="muted tiny">좌우로 스크롤하여 모든 열을 확인할 수 있습니다. '○'는 해당 등급의 보유 기록을 뜻합니다. 맨 아래 기술등급 합계는 직원 수(명), 자격증 등급 합계는 실제 자격증 개수(건)로 계산합니다. 한 사람이 서로 다른 등급을 가진 경우 각 등급에 각각 포함됩니다. 등록 면허 열에는 면허·업종등록 내역을 함께 표시합니다. 개인정보가 담긴 엑셀은 GitHub에 올리지 마세요.</p></section>`;
  $$('dirSearch').addEventListener('input',drawDirectory);fields.forEach(([key])=>$$('dir_'+key).addEventListener('change',drawDirectory));
  $$('dirResult').addEventListener('click',e=>{const target=e.target.closest('[data-edit-id]');if(target)openEmployeeEditor(directoryRows.find(r=>r.id===Number(target.dataset.editId)));});
- $$('dirReset').onclick=()=>{$$('dirSearch').value='';fields.forEach(([key])=>$$('dir_'+key).value='');drawDirectory()};drawDirectory();
+ $$('dirReset').onclick=()=>{$$('dirSearch').value='';fields.forEach(([key])=>$$('dir_'+key).value='');drawDirectory()};
+ $$('dirExportAll').onclick=()=>exportPeopleOpsExcel('technical',false,$$('dirExportAll'));
+ $$('dirExportFiltered').onclick=()=>exportPeopleOpsExcel('technical',true,$$('dirExportFiltered'));
+ drawDirectory();
 }
 
 
 async function showAllEmployees(){
  const d=await fetchJSON('/api/directory');
  directoryRows=d.rows||[];
- $$('body').innerHTML=`<section class="directory all-employees"><div class="directory-head"><div><h2>직원명부</h2><p class="muted">자격증 보유 여부와 관계없이 전체 직원을 관리합니다. 종합 대시보드 인원 집계 기준입니다.</p></div><div class="directory-actions"><button id="allAdd" class="primary">+ 직원 추가</button><button id="allImport">엑셀 일괄 업로드</button></div></div><div class="directory-filters"><label>직원 검색<input id="allSearch" type="search" placeholder="사번·성명·부서 검색"></label><label>사업장<select id="allWorkplace"><option value="">전체</option><option>오산본사</option><option>과천지사</option></select></label><label>재직 상태<select id="allStatus"><option value="">전체</option><option value="active">재직</option><option value="former">퇴사</option></select></label></div><p id="allCount" class="muted"></p><div id="allResult" class="excel-scroll"></div></section>`;
+ $$('body').innerHTML=`<section class="directory all-employees"><div class="directory-head"><div><h2>직원명부</h2><p class="muted">자격증 보유 여부와 관계없이 전체 직원을 관리합니다. 종합 대시보드 인원 집계 기준입니다.</p></div><div class="directory-actions"><button id="allAdd" class="primary">+ 직원 추가</button><button id="allImport">엑셀 일괄 업로드</button><button id="allExportAll" type="button" class="export-excel">전체 엑셀 다운로드</button><button id="allExportFiltered" type="button" class="export-excel">조회 결과 다운로드</button></div></div><div class="directory-filters"><label>직원 검색<input id="allSearch" type="search" placeholder="사번·성명·부서 검색"></label><label>사업장<select id="allWorkplace"><option value="">전체</option><option>오산본사</option><option>과천지사</option></select></label><label>재직 상태<select id="allStatus"><option value="">전체</option><option value="active">재직</option><option value="former">퇴사</option></select></label></div><p id="allCount" class="muted"></p><div id="allResult" class="excel-scroll"></div></section>`;
  const draw=()=>{
   const q=clean($$('allSearch').value).toLowerCase(),site=$$('allWorkplace').value,status=$$('allStatus').value;
-  const today=new Date().toLocaleDateString('en-CA');
-  const rows=directoryRows.filter(r=>{
-   if(q&&!String([r.employee_no,r.name,r.department,r.job_title].join(' ')).toLowerCase().includes(q))return false;
-   if(site&&r.workplace!==site)return false;
-   const active=(!r.hire_date||r.hire_date<=today)&&(!r.termination_date||r.termination_date>today);
-   return !status||(status==='active'?active:!active&&!!r.termination_date&&r.termination_date<=today);
-  });
+  const rows=filterAllEmployees(directoryRows,q,site,status);
   $$('allCount').textContent=`조회 ${rows.length}명 / 전체 ${directoryRows.length}명`;
   $$('allResult').innerHTML=`<table class="excel-directory all-staff-table"><thead><tr><th>사번</th><th>사업장</th><th>부서</th><th>직책</th><th>성명</th><th>입사일</th><th>퇴사일</th><th>자격증</th><th>정보 수정</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr><td>${textOrDash(r.employee_no)}</td><td>${textOrDash(r.workplace)}</td><td>${textOrDash(r.department)}</td><td>${textOrDash(r.job_title)}</td><td>${escapeHTML(r.name)}</td><td>${textOrDash(r.hire_date)}</td><td>${textOrDash(r.termination_date)}</td><td>${r.certificates?.length||0}건</td><td><button class="employee-link" data-edit-id="${r.id}">수정</button></td></tr>`).join(''):'<tr><td colspan="9">조회된 직원이 없습니다.</td></tr>'}</tbody></table>`;
  };
  ['allSearch','allWorkplace','allStatus'].forEach(id=>$$ (id).addEventListener(id==='allSearch'?'input':'change',draw));
  $$('allAdd').onclick=()=>openEmployeeEditor();$$('allImport').onclick=openImportModal;
+ $$('allExportAll').onclick=()=>exportPeopleOpsExcel('employees',false,$$('allExportAll'));
+ $$('allExportFiltered').onclick=()=>exportPeopleOpsExcel('employees',true,$$('allExportFiltered'));
  $$('allResult').addEventListener('click',e=>{let t=e.target.closest('[data-edit-id]');if(t)openEmployeeEditor(directoryRows.find(r=>r.id===Number(t.dataset.editId)))});
  draw();
 }
@@ -137,6 +148,117 @@ function openImportModal(){setModal(`<div class="modal-shade" id="importModal"><
  status.textContent=`완료: 신규 ${created}명, 수정 ${updated}명, 건너뜀 ${skipped}명, 오류 ${errors.length}건${errors.length?'\n'+errors.slice(0,12).join('\n'):''}`;await load(view==='technical_staff'?'technical_staff':'employees');};}
 
 
+
+// D1의 두 집계 API에서 값을 읽어 Excel 2007+ (.xlsx) 1개 시트로 내보냅니다.
+// 외부 CDN / 전송 없이 브라우저에서만 ZIP(OpenXML)을 생성합니다.
+function excelXml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');}
+function excelCol(n){let s='';for(n++;n;n=Math.floor((n-1)/26))s=String.fromCharCode(65+(n-1)%26)+s;return s;}
+function zipStored(entries){
+ const encoder=new TextEncoder(),chunks=[],directory=[];let offset=0;
+ const crcTable=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);crcTable[i]=c>>>0;}
+ const crc32=b=>{let c=0xFFFFFFFF;for(const x of b)c=crcTable[(c^x)&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;};
+ const u16=(v)=>[v&255,(v>>>8)&255],u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+ for(const [filename,body] of entries){
+  const name=encoder.encode(filename),data=encoder.encode(body),crc=crc32(data);
+  const local=new Uint8Array([80,75,3,4,20,0,0,8,0,0,0,0,0,0,...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),0,0]);
+  chunks.push(local,name,data);
+  directory.push({name,crc,size:data.length,offset});offset+=local.length+name.length+data.length;
+ }
+ let dirLength=0;
+ for(const e of directory){
+  const head=new Uint8Array([80,75,1,2,20,0,20,0,0,8,0,0,0,0,0,0,...u32(e.crc),...u32(e.size),...u32(e.size),...u16(e.name.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(e.offset)]);
+  chunks.push(head,e.name);dirLength+=head.length+e.name.length;
+ }
+ chunks.push(new Uint8Array([80,75,5,6,0,0,0,0,...u16(directory.length),...u16(directory.length),...u32(dirLength),...u32(offset),0,0]));
+ return new Blob(chunks,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+function createHeadcountWorkbook(year,rows){
+ const headers=['월','전체 월말 재직(명)','입사(명)','퇴사(명)','전월 대비(명)','오산본사(명)','과천지사(명)','사업장 미지정·기타(명)'];
+ const cells=[headers,...rows];
+ const xmlRows=cells.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>{
+  const ref=excelCol(ci)+(ri+1);
+  return typeof v==='number'&&Number.isFinite(v)?`<c r="${ref}"><v>${v}</v></c>`:`<c r="${ref}" t="inlineStr"><is><t>${excelXml(v)}</t></is></c>`;
+ }).join('')}</row>`).join('');
+ const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:H${cells.length}"/><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><sheetData>${xmlRows}</sheetData><autoFilter ref="A1:H${cells.length}"/></worksheet>`;
+ const wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="월별 인원 현황" sheetId="1" r:id="rId1"/></sheets></workbook>';
+ const rel='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>';
+ const rootrel='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+ const types='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>';
+ return zipStored([['[Content_Types].xml',types],['_rels/.rels',rootrel],['xl/workbook.xml',wb],['xl/_rels/workbook.xml.rels',rel],['xl/worksheets/sheet1.xml',sheet]]);
+}
+
+// 직원명부/기술인력 현황 엑셀(.xlsx) - 동일 인증 세션의 D1 데이터를 사용합니다.
+function createPeopleOpsWorkbook(title,headers,records){
+ const cells=[headers,...records];
+ const rowXml=cells.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>{
+  const ref=excelCol(ci)+(ri+1);
+  return typeof v==='number'&&Number.isFinite(v)?`<c r="${ref}"><v>${v}</v></c>`:`<c r="${ref}" t="inlineStr"><is><t>${excelXml(v)}</t></is></c>`;
+ }).join('')}</row>`).join('');
+ const last=excelCol(headers.length-1),endRow=cells.length;
+ const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${last}${endRow}"/><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="18"/><sheetData>${rowXml}</sheetData><autoFilter ref="A1:${last}${endRow}"/></worksheet>`;
+ const wb=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${excelXml(title)}" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+ const rel='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>';
+ const rootrel='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+ const types='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>';
+ return zipStored([['[Content_Types].xml',types],['_rels/.rels',rootrel],['xl/workbook.xml',wb],['xl/_rels/workbook.xml.rels',rel],['xl/worksheets/sheet1.xml',sheet]]);
+}
+function peopleOpsExcelRows(mode,rows){
+ if(mode==='employees')return {
+  title:'직원명부',headers:['사번','사업장','부서','직책','성명','입사일','퇴사일','자격증 보유 건수'],
+  records:rows.map(r=>[r.employee_no||'',r.workplace||'',r.department||'',r.job_title||'',r.name||'',r.hire_date||'',r.termination_date||'',r.certificates?.length||0])
+ };
+ const marks=['산업기사','기사','기능장','기술사'];
+ const hasGrade=(r,g)=>(r.grades||[]).some(x=>clean(x.grade).includes(g));
+ const headers=['사업장','부서','직책','성명','건설기술인 분야','초급','중급','고급','특급','자격증','산업기사','기사','기능장','기술사','등록 면허'];
+ const records=[];
+ for(const r of rows){
+  const certs=r.certificates?.length?r.certificates:[null];
+  for(const [i,cert] of certs.entries()){
+   const type=cert?certificateType(cert):'';
+   records.push([i?'':r.workplace||'',i?'':r.department||'',i?'':r.job_title||'',r.name||'',i?'':[...new Set((r.grades||[]).map(g=>clean(g.technical_field)).filter(Boolean))].join(' / '),...gradeOrder.map(g=>i?'':hasGrade(r,g)?'○':''),cert?.certificate_name||'',...marks.map(t=>type===t?'○':''),i?'':[...new Set((r.licenses||[]).map(l=>clean(l.license_type)).filter(Boolean))].join(' / ')]);
+  }
+ }
+ records.push(['합계 (직원 '+rows.length+'명 / 자격증 '+rows.reduce((n,r)=>n+(r.certificates?.length||0),0)+'건)','','','','',...gradeOrder.map(g=>rows.filter(r=>hasGrade(r,g)).length),rows.reduce((n,r)=>n+(r.certificates?.length||0),0),...marks.map(type=>rows.reduce((n,r)=>n+(r.certificates||[]).filter(c=>certificateType(c)===type).length,0)),rows.filter(r=>r.licenses?.length).length]);
+ return {title:'기술인력 보유현황표',headers,records};
+}
+async function exportPeopleOpsExcel(mode,filtered,button){
+ const old=button.textContent;button.disabled=true;button.textContent='엑셀 생성 중…';
+ try{
+  // 다운로드 직전 서버 데이터를 다시 읽어 화면 갱신 전 누락을 방지합니다.
+  const d=await fetchJSON('/api/directory');
+  let rows=d.rows||[];
+  if(mode==='employees'){
+   if(filtered)rows=filterAllEmployees(rows,clean($$('allSearch')?.value).toLowerCase(),$$('allWorkplace')?.value||'', $$('allStatus')?.value||'');
+  }else{
+   const q=filtered?clean($$('dirSearch')?.value).toLowerCase():'';
+   const keys=['workplace','department','grade','field','certificate','license'];
+   const f=Object.fromEntries(keys.map(k=>[k,filtered?clean($$('dir_'+k)?.value):'']));
+   rows=filterTechnicalEmployees(rows,q,f);
+  }
+  const {title,headers,records}=peopleOpsExcelRows(mode,rows);
+  const blob=createPeopleOpsWorkbook(title,headers,records);
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
+  a.download=`PeopleOps_${mode==='employees'?'직원명부':'기술인력보유현황표'}_${filtered?'조회결과':'전체'}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ }catch(e){alert('엑셀 다운로드 실패: '+e.message)}finally{button.disabled=false;button.textContent=old;}
+}
+async function downloadTrendExcel(year,btn){
+ if(!Number.isInteger(year))return;
+ btn.disabled=true;const old=btn.textContent;btn.textContent='엑셀 생성 중…';
+ try{
+  const [total,work]=await Promise.all([fetchJSON('/api/headcount-trend?year='+year),fetchJSON('/api/workplace-trend?year='+year)]);
+  if((total.months||[]).length!==12||(work.months||[]).length!==12)throw new Error('12개월 데이터가 완전하지 않습니다.');
+  const workplaces=new Map(work.months.map(r=>[Number(r.month),r]));
+  const rows=total.months.map((r,i)=>{
+   const w=workplaces.get(Number(r.month));if(!w)throw new Error('사업장 월별 자료가 누락됐습니다.');
+   const prev=total.months[i-1];
+   return [r.month+'월',Number(r.headcount)||0,Number(r.hires)||0,Number(r.leaves)||0,i?Number(r.headcount)-Number(prev.headcount):'',Number(w.osan)||0,Number(w.gwacheon)||0,Number(w.unassigned)||0];
+  });
+  const blob=createHeadcountWorkbook(year,rows),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=`PeopleOps_${year}년_월별재직인원.xlsx`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ }catch(e){alert('엑셀 다운로드 실패: '+e.message);}finally{btn.disabled=false;btn.textContent=old;}
+}
+
 // D1 기준 월말 재직 인원 추이: 관리 화면의 검색 필터와 무관한 전 직원 통계.
 async function initHeadcountTrend(){
  const sel=$$('trendYear');
@@ -144,6 +266,7 @@ async function initHeadcountTrend(){
  const current=new Date().getFullYear();
  for(let y=current;y>=Math.max(2000,current-10);y--){const o=document.createElement('option');o.value=String(y);o.textContent=y+'년';sel.appendChild(o);}
  sel.onchange=()=>{drawHeadcountTrend(Number(sel.value));drawWorkplaceTrend(Number(sel.value));};
+ const exportBtn=$$('downloadTrendExcel');if(exportBtn)exportBtn.onclick=()=>downloadTrendExcel(Number(sel.value),exportBtn);
  await Promise.all([drawHeadcountTrend(current),drawWorkplaceTrend(current)]);
 }
 async function drawHeadcountTrend(year){
