@@ -62,10 +62,17 @@ function matchingTechnicalCertificateRows(rows,certificate=''){
 function sortEmployeesByHireDate(rows){
  return [...rows].sort((a,b)=>{
   const ad=String(a.hire_date||'').trim(), bd=String(b.hire_date||'').trim();
-  if(!ad&&!bd)return 0;
-  if(!ad)return 1;
-  if(!bd)return -1;
-  return ad.localeCompare(bd);
+  // 입사일을 우선 정렬하고, 같은 입사일이면 사번의 자연스러운 오름차순으로 정렬합니다.
+  if(ad!==bd){
+   if(!ad)return 1;
+   if(!bd)return -1;
+   return ad.localeCompare(bd);
+  }
+  const an=String(a.employee_no??'').trim(), bn=String(b.employee_no??'').trim();
+  if(!an&&!bn)return 0;
+  if(!an)return 1;
+  if(!bn)return -1;
+  return an.localeCompare(bn,'ko',{numeric:true,sensitivity:'base'});
  });
 }
 function filterAllEmployees(rows,q='',site='',status=''){
