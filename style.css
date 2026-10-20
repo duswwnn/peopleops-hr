@@ -49,3 +49,5 @@
 .trend-chart{margin-top:8px}
 .trend-scroll svg{width:100%;max-width:720px;min-width:0;height:auto}
 @media (max-width:640px){.trend-panel{max-width:100%;padding:12px}.trend-scroll{overflow-x:auto}.trend-scroll svg{width:620px;min-width:620px}}
+
+.all-staff-table{min-width:850px}.all-staff-table td,.all-staff-table th{white-space:nowrap;padding:10px}.all-employees .directory-filters{margin-top:14px}
