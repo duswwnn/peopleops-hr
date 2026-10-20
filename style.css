@@ -257,3 +257,24 @@
 /* 기술인력 보유현황표: 첫 행과 추가 자격증 행의 자격증명 글씨 굵기 통일 */
 .excel-directory tbody tr.person-first td.certificate-col,
 .excel-directory tbody tr.person-continuation td.certificate-col { font-weight: 400; }
+
+/* 좌측 메뉴 회사명: 기존 nav 내부 표시를 없애고 사이드바 최하단에 고정 */
+.shell > aside { position: relative; padding-bottom: 78px; }
+.shell > aside nav::after { content: none; display: none; }
+.shell > aside::after {
+  content: "EMKO · HR Management";
+  position: absolute;
+  bottom: 18px;
+  left: 16px;
+  right: 16px;
+  padding: 14px 10px 0;
+  border-top: 1px solid rgba(202, 214, 231, .20);
+  color: #AABAD0;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: .01em;
+  line-height: 1.6;
+  text-align: left;
+  pointer-events: none;
+}
+@media (min-width: 751px) { .shell > aside { position: sticky; } }
