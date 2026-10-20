@@ -51,6 +51,13 @@ function filterTechnicalEmployees(rows,q='',f={}){
   return (!f.workplace||r.workplace===f.workplace)&&(!f.department||r.department===f.department)&&has(r.grades,'grade',f.grade)&&has(r.grades,'technical_field',f.field)&&has(r.certificates,'certificate_name',f.certificate)&&has(r.licenses,'license_type',f.license);
  });
 }
+// 자격증 필터는 직원만이 아니라 해당 직원의 자격증 행에도 적용합니다.
+// 기존 D1 데이터나 원본 directoryRows 객체는 변경하지 않습니다.
+function matchingTechnicalCertificateRows(rows,certificate=''){
+ const selected=clean(certificate);
+ if(!selected)return rows;
+ return rows.map(r=>({...r,certificates:(r.certificates||[]).filter(c=>clean(c.certificate_name)===selected)}));
+}
 function filterAllEmployees(rows,q='',site='',status=''){
  const today=new Date().toLocaleDateString('en-CA');
  return rows.filter(r=>{
@@ -64,7 +71,7 @@ function drawDirectory(){
  const q=clean($$('dirSearch').value).toLowerCase();
  const keys=['workplace','department','grade','field','certificate','license'];
  const f=Object.fromEntries(keys.map(k=>[k,clean($$('dir_'+k).value)]));
- const filtered=filterTechnicalEmployees(directoryRows,q,f);
+ const filtered=matchingTechnicalCertificateRows(filterTechnicalEmployees(directoryRows,q,f),f.certificate);
  const marks=['산업기사','기사','기능장','기술사'];
  const hasGrade=(r,g)=>r.grades.some(x=>clean(x.grade).includes(g));
  const countCertificates=g=>filtered.reduce((n,r)=>n+r.certificates.filter(c=>certificateType(c)===g).length,0);
@@ -246,7 +253,7 @@ async function exportPeopleOpsExcel(mode,filtered,button){
    const q=filtered?clean($$('dirSearch')?.value).toLowerCase():'';
    const keys=['workplace','department','grade','field','certificate','license'];
    const f=Object.fromEntries(keys.map(k=>[k,filtered?clean($$('dir_'+k)?.value):'']));
-   rows=filterTechnicalEmployees(rows,q,f);
+   rows=matchingTechnicalCertificateRows(filterTechnicalEmployees(rows,q,f),f.certificate);
   }
   const {title,headers,records}=peopleOpsExcelRows(mode,rows);
   const blob=createPeopleOpsWorkbook(title,headers,records);
