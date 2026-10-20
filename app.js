@@ -191,7 +191,14 @@ async function drawWorkplaceTrend(year){
   const series=[{key:'osan',name:'오산본사',color:'#2563a6'},{key:'gwacheon',name:'과천지사',color:'#e48b36'}];
   const grid=[0,.25,.5,.75,1].map(t=>`<line x1="${L}" y1="${y(max*t)}" x2="${W-R}" y2="${y(max*t)}" stroke="#e5eaf0"/><text x="${L-8}" y="${y(max*t)+4}" text-anchor="end" font-size="12" fill="#64748b">${Math.round(max*t)}</text>`).join('');
   const labels=a.map((d,i)=>`<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="12" fill="#475569">${d.month}월</text>`).join('');
-  const curves=series.map(s=>`<polyline points="${a.map((d,i)=>x(i)+','+y(d[s.key])).join(' ')}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${a.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d[s.key])}" r="4" fill="${s.color}"><title>${d.month}월 ${s.name} ${d[s.key]}명</title></circle>`).join('')}`).join('');
+  const curves=series.map(s=>{
+   const labelDy=s.key==='osan'?-10:16;
+   return `<polyline points="${a.map((d,i)=>x(i)+','+y(d[s.key])).join(' ')}" fill="none" stroke="${s.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${a.map((d,i)=>{
+    const cy=y(d[s.key]);
+    const labelY=Math.max(14,Math.min(H-8,cy+labelDy));
+    return `<circle cx="${x(i)}" cy="${cy}" r="4" fill="${s.color}"><title>${d.month}월 ${s.name} ${d[s.key]}명</title></circle><text x="${x(i)}" y="${labelY}" text-anchor="middle" font-size="12" font-weight="600" fill="${s.color}">${d[s.key]}</text>`;
+   }).join('')}`;
+  }).join('');
   const rows=a.map(d=>`<tr><td>${d.month}월</td><td>${d.osan}명</td><td>${d.gwacheon}명</td><td>${d.unassigned}명</td></tr>`).join('');
   target.innerHTML=`<div class="workplace-legend"><span><i style="background:#2563a6"></i>오산본사</span><span><i style="background:#e48b36"></i>과천지사</span></div><div class="trend-scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${year}년 오산본사와 과천지사의 월말 재직 인원 비교">${grid}${curves}${labels}</svg></div><details class="trend-details"><summary>사업장별 월별 인원표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>오산본사</th><th>과천지사</th><th>사업장 미지정·기타</th></tr></thead><tbody>${rows}</tbody></table></div></details><p class="trend-note">※ 직원명부의 사업장을 기준으로 계산합니다. 사업장 미지정·기타 인원은 별도 표에서 확인할 수 있습니다.</p>`;
  }catch(e){if($$('workplaceChart'))$$('workplaceChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}

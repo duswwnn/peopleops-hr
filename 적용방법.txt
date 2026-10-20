@@ -1,8 +1,1 @@
-PeopleOps 메뉴 분리 업데이트
-1. GitHub 루트에 index.html, app.js, style.css 세 파일을 덮어씁니다.
-2. 기존 functions, DB, Secret 설정은 변경하지 않습니다.
-3. 기존 xlsx-reader.js 파일을 삭제하지 마세요.
-4. Cloudflare 배포 완료 후 Ctrl+Shift+R 새로고침.
-5. 직원명부에는 모든 직원, 기술인력 보유현황표에는 자격증/기술등급/면허 중 1건 이상 있는 직원만 나타납니다.
-6. 입퇴사 대시보드와 그래프는 employees 테이블 전체를 기준으로 기존과 동일하게 작동합니다.
-7. 실제 개인정보 입력 전 계정 보호 및 D1 백업을 확인하세요.
+기존 PeopleOps 파일 중 app.js만 이번 파일로 교체한 뒤 GitHub에 업로드하고 Commit changes 하세요.
