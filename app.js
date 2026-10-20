@@ -97,19 +97,26 @@ function drawDirectory(){
  const gradeMarks=(r,g)=>hasGrade(r,g)?'○':'';
  const makeRows=r=>{
   const certificates=r.certificates.length?r.certificates:[null];
+  const span=certificates.length;
+  const rowspan=span>1?` rowspan="${span}"`:'';
+  // 동일 직원의 공통 정보는 실제 셀 병합(rowspan)으로 한 번만 출력합니다.
+  // 자격증별 열은 각각 별도 행에 유지하여 검색 결과와 건수 합계를 보존합니다.
   return certificates.map((cert,index)=>{
     const first=index===0;
     const type=cert?certificateType(cert):'';
+    const common=first?`
+     <td class="workplace-col merged-person-cell"${rowspan}>${textOrDash(r.workplace)}</td>
+     <td class="dept-col merged-person-cell"${rowspan}>${textOrDash(r.department)}</td>
+     <td class="merged-person-cell"${rowspan}>${textOrDash(r.job_title)}</td>
+     <td class="name-col merged-person-cell"${rowspan}><button type="button" class="employee-link" data-edit-id="${r.id}">${escapeHTML(r.name)}</button></td>
+     <td class="field-col merged-person-cell"${rowspan}>${textOrDash([...new Set(r.grades.map(x=>clean(x.technical_field)).filter(Boolean))].join(' / '))}</td>
+     ${gradeOrder.map(g=>`<td class="mark merged-person-cell"${rowspan}>${gradeMarks(r,g)}</td>`).join('')}`:'';
+    const license=first?`<td class="license-col merged-person-cell"${rowspan}>${textOrDash([...new Set(r.licenses.map(x=>x.license_type).map(clean).filter(Boolean))].join(' / '))}</td>`:'';
     return `<tr data-emp-id="${r.id}" class="${first?'person-first':'person-continuation'}">
-     <td class="workplace-col">${first?textOrDash(r.workplace):'<span class="repeat-mark">〃</span>'}</td>
-     <td class="dept-col">${first?textOrDash(r.department):'<span class="repeat-mark">〃</span>'}</td>
-     <td>${first?textOrDash(r.job_title):'<span class="repeat-mark">〃</span>'}</td>
-     <td class="name-col">${first?`<button type="button" class="employee-link" data-edit-id="${r.id}">${escapeHTML(r.name)}</button>`:`<button type="button" class="employee-link" data-edit-id="${r.id}" aria-label="${escapeHTML(r.name)} 정보 수정">${escapeHTML(r.name)}</button>`}</td>
-     <td class="field-col">${first?textOrDash([...new Set(r.grades.map(x=>clean(x.technical_field)).filter(Boolean))].join(' / ')):'<span class="repeat-mark">〃</span>'}</td>
-     ${gradeOrder.map(g=>`<td class="mark">${first?gradeMarks(r,g):''}</td>`).join('')}
+     ${common}
      <td class="certificate-col">${cert?escapeHTML(cert.certificate_name):'<span class="dim">-</span>'}</td>
      ${marks.map(g=>`<td class="mark">${type===g?'○':''}</td>`).join('')}
-     <td class="license-col">${first?textOrDash([...new Set(r.licenses.map(x=>x.license_type).map(clean).filter(Boolean))].join(' / ')):'<span class="repeat-mark">〃</span>'}</td>
+     ${license}
     </tr>`;
   }).join('');
  };
