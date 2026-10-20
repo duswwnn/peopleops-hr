@@ -22,51 +22,59 @@ function uniqOpts(rows, getter){return [...new Set(rows.flatMap(r=>getter(r)).ma
 function controlSelect(id,label,options){return `<label>${label}<select id="${id}"><option value="">전체</option>${options.map(x=>`<option value="${escapeHTML(x)}">${escapeHTML(x)}</option>`).join('')}</select></label>`;}
 function textOrDash(s){const t=listText(s);return t?escapeHTML(t):'<span class="dim">-</span>';}
 function cellTags(values){return values.length?values.map(s=>`<span class="pill">${escapeHTML(s)}</span>`).join(' '):'<span class="dim">-</span>';}
+function certificateType(x){
+ const s=clean(x.certificate_name).replace(/\s+/g,'');
+ const fallback=clean(x.certificate_level).replace(/\s+/g,'');
+ const type=(t)=>t.includes('산업기사')?'산업기사':t.includes('기능장')?'기능장':t.includes('기술사')?'기술사':t.endsWith('기사')?'기사':'';
+ return type(s)||type(fallback);
+}
 function drawDirectory(){
  const q=clean($$('dirSearch').value).toLowerCase();
- const filters=['workplace','department','grade','field','certificate','license'];
- const selected=Object.fromEntries(filters.map(k=>[k,clean($$('dir_'+k).value)]));
+ const keys=['workplace','department','grade','field','certificate','license'];
+ const f=Object.fromEntries(keys.map(k=>[k,clean($$('dir_'+k).value)]));
  const filtered=directoryRows.filter(r=>{
-  const haystack=[r.employee_no,r.name,r.department,r.workplace,r.job_title,...r.grades.map(x=>x.technical_field+' '+x.grade),...r.certificates.map(x=>x.certificate_name+' '+x.certificate_level),...r.licenses.map(x=>x.license_type),...r.industries.map(x=>x.industry_name)].join(' ').toLowerCase();
-  if(q&&!haystack.includes(q))return false;
-  const has=(arr,field,val)=>!val||arr.some(x=>clean(x[field]).includes(val));
-  return (!selected.department||r.department===selected.department)&&(!selected.workplace||r.workplace===selected.workplace)
-   &&has(r.grades,'grade',selected.grade)&&has(r.grades,'technical_field',selected.field)
-   &&has(r.certificates,'certificate_name',selected.certificate)&&has(r.licenses,'license_type',selected.license);
+  const words=[r.employee_no,r.name,r.department,r.workplace,r.job_title,...r.grades.map(x=>x.technical_field+' '+x.grade),...r.certificates.map(x=>x.certificate_name+' '+x.certificate_level),...r.licenses.map(x=>x.license_type),...r.industries.map(x=>x.industry_name)].join(' ').toLowerCase();
+  if(q&&!words.includes(q))return false;
+  const has=(array,key,value)=>!value||array.some(item=>clean(item[key]).includes(value));
+  return (!f.workplace||r.workplace===f.workplace)&&(!f.department||r.department===f.department)&&has(r.grades,'grade',f.grade)&&has(r.grades,'technical_field',f.field)&&has(r.certificates,'certificate_name',f.certificate)&&has(r.licenses,'license_type',f.license);
  });
- $$('dirCount').textContent=`조회 ${filtered.length}명 / 전체 ${directoryRows.length}명`;
- const gradeMarks=(r,g)=>r.grades.some(x=>clean(x.grade).includes(g))?'○':'';
- const certMarks=(r,g)=>hasCert(r,g)?'○':'';
- // 직원별 보유 여부를 집계합니다. 자격증이 여러 건이어도 해당 등급은 1명으로 계산합니다.
+ const marks=['산업기사','기사','기능장','기술사'];
  const hasGrade=(r,g)=>r.grades.some(x=>clean(x.grade).includes(g));
- // 자격증 명칭을 우선하여 등급을 판별합니다.
- // 산업기사에는 '기사'가 포함되므로 반드시 산업기사를 먼저 확인합니다.
- const certClass=(x)=>{
-  const name=clean(x.certificate_name).replace(/\s+/g,'');
-  const level=clean(x.certificate_level).replace(/\s+/g,'');
-  const classify=(s)=>{
-   if(s.includes('산업기사'))return '산업기사';
-   if(s.includes('기능장'))return '기능장';
-   if(s.includes('기술사'))return '기술사';
-   if(s.includes('기사'))return '기사';
-   return '';
-  };
-  return classify(name)||classify(level);
- };
- const certTypes=['산업기사','기사','기능장','기술사'];
- const hasCert=(r,g)=>r.certificates.some(x=>certClass(x)===g);
+ const countCertificates=g=>filtered.reduce((n,r)=>n+r.certificates.filter(c=>certificateType(c)===g).length,0);
+ const uniqueCertPeople=g=>filtered.filter(r=>r.certificates.some(c=>certificateType(c)===g)).length;
+ const countAll=filtered.reduce((n,r)=>n+r.certificates.length,0);
+ const physicalRows=filtered.reduce((n,r)=>n+Math.max(1,r.certificates.length),0);
+ $$('dirCount').textContent=`조회 직원 ${filtered.length}명 / 전체 ${directoryRows.length}명 · 표시 자격증 ${countAll}건`;
  const totalGrades=gradeOrder.map(g=>filtered.filter(r=>hasGrade(r,g)).length);
- const totalCerts=certTypes.map(g=>filtered.filter(r=>hasCert(r,g)).length);
- const certHolders=filtered.filter(r=>r.certificates.length>0).length;
- const licensed=filtered.filter(r=>r.licenses.length>0||r.industries.length>0).length;
- const footer=`<tr class="excel-total-row"><th colspan="4">합계 (${filtered.length}명)</th><td class="field-col">-</td>${totalGrades.map(n=>`<td>${n}명</td>`).join('')}<td>${certHolders}명</td>${totalCerts.map(n=>`<td>${n}명</td>`).join('')}<td>${licensed}명</td></tr>`;
- const row=(r)=>`<tr data-emp-id="${r.id}"><td class="workplace-col">${textOrDash(r.workplace)}</td><td class="dept-col">${textOrDash(r.department)}</td><td>${textOrDash(r.job_title)}</td><td class="name-col"><button type="button" class="employee-link" data-edit-id="${r.id}">${textOrDash(r.name)}</button></td><td class="field-col">${textOrDash([...new Set(r.grades.map(x=>clean(x.technical_field)).filter(Boolean))].join(' / '))}</td>${gradeOrder.map(g=>`<td class="mark">${gradeMarks(r,g)}</td>`).join('')}<td class="certificate-col">${textOrDash([...new Set(r.certificates.map(x=>clean(x.certificate_name)).filter(Boolean))].join(' / '))}</td>${['산업기사','기사','기능장','기술사'].map(g=>`<td class="mark">${certMarks(r,g)}</td>`).join('')}<td class="license-col">${textOrDash([...new Set([...r.licenses.map(x=>x.license_type),...r.industries.map(x=>x.industry_name)].map(clean).filter(Boolean))].join(' / '))}</td></tr>`;
- $$('dirResult').innerHTML=`<div class="excel-scroll"><table class="excel-directory"><colgroup><col style="width:120px"><col style="width:145px"><col style="width:110px"><col style="width:104px"><col style="width:112px">${Array(4).fill('<col style="width:67px">').join('')}<col style="width:188px">${Array(4).fill('<col style="width:75px">').join('')}<col style="width:245px"></colgroup><thead><tr class="group-header"><th rowspan="2">사 업 장</th><th rowspan="2">부 서</th><th rowspan="2">직 책</th><th rowspan="2">성 명</th><th colspan="5">건설기술인</th><th colspan="5">국가기술자격</th><th rowspan="2">등록 면허</th></tr><tr class="sub-header"><th>분야</th><th>초급</th><th>중급</th><th>고급</th><th>특급</th><th>자격증</th><th>산업기사</th><th>기사</th><th>기능장</th><th>기술사</th></tr></thead><tbody>${filtered.length?filtered.map(row).join(''):'<tr><td class="empty-row" colspan="15">조회된 직원이 없습니다.</td></tr>'}</tbody><tfoot>${footer}</tfoot></table></div>`;
+ const totalCerts=marks.map(countCertificates);
+ const totalUniqueCerts=marks.map(uniqueCertPeople);
+ const licensed=filtered.filter(r=>r.licenses.length>0).length;
+ const footer=`<tr class="excel-total-row"><th colspan="4">합계 (직원 ${filtered.length}명 · 자격증 ${countAll}건)</th><td class="field-col">-</td>${totalGrades.map(n=>`<td>${n}명</td>`).join('')}<td>${countAll}건</td>${totalCerts.map(n=>`<td>${n}건</td>`).join('')}<td>${licensed}명</td></tr>`;
+ const gradeMarks=(r,g)=>hasGrade(r,g)?'○':'';
+ const makeRows=r=>{
+  const certificates=r.certificates.length?r.certificates:[null];
+  return certificates.map((cert,index)=>{
+    const first=index===0;
+    const type=cert?certificateType(cert):'';
+    return `<tr data-emp-id="${r.id}" class="${first?'person-first':'person-continuation'}">
+     <td class="workplace-col">${first?textOrDash(r.workplace):'<span class="repeat-mark">〃</span>'}</td>
+     <td class="dept-col">${first?textOrDash(r.department):'<span class="repeat-mark">〃</span>'}</td>
+     <td>${first?textOrDash(r.job_title):'<span class="repeat-mark">〃</span>'}</td>
+     <td class="name-col">${first?`<button type="button" class="employee-link" data-edit-id="${r.id}">${escapeHTML(r.name)}</button>`:`<button type="button" class="employee-link" data-edit-id="${r.id}" aria-label="${escapeHTML(r.name)} 정보 수정">${escapeHTML(r.name)}</button>`}</td>
+     <td class="field-col">${first?textOrDash([...new Set(r.grades.map(x=>clean(x.technical_field)).filter(Boolean))].join(' / ')):'<span class="repeat-mark">〃</span>'}</td>
+     ${gradeOrder.map(g=>`<td class="mark">${first?gradeMarks(r,g):''}</td>`).join('')}
+     <td class="certificate-col">${cert?escapeHTML(cert.certificate_name):'<span class="dim">-</span>'}</td>
+     ${marks.map(g=>`<td class="mark">${type===g?'○':''}</td>`).join('')}
+     <td class="license-col">${first?textOrDash([...new Set(r.licenses.map(x=>x.license_type).map(clean).filter(Boolean))].join(' / ')):'<span class="repeat-mark">〃</span>'}</td>
+    </tr>`;
+  }).join('');
+ };
+ $$('dirResult').innerHTML=`<div class="excel-scroll"><table class="excel-directory"><colgroup><col style="width:120px"><col style="width:145px"><col style="width:110px"><col style="width:104px"><col style="width:112px">${Array(4).fill('<col style="width:67px">').join('')}<col style="width:188px">${Array(4).fill('<col style="width:75px">').join('')}<col style="width:245px"></colgroup><thead><tr class="group-header"><th rowspan="2">사 업 장</th><th rowspan="2">부 서</th><th rowspan="2">직 책</th><th rowspan="2">성 명</th><th colspan="5">건설기술인</th><th colspan="5">국가기술자격</th><th rowspan="2">등록 면허</th></tr><tr class="sub-header"><th>분야</th><th>초급</th><th>중급</th><th>고급</th><th>특급</th><th>자격증</th><th>산업기사</th><th>기사</th><th>기능장</th><th>기술사</th></tr></thead><tbody>${physicalRows?filtered.map(makeRows).join(''):'<tr><td class="empty-row" colspan="15">조회된 직원이 없습니다.</td></tr>'}</tbody><tfoot>${footer}</tfoot></table></div><p class="muted tiny">자격증은 1건당 1행으로 표시합니다. 기사·산업기사 합계는 자격증 개수(건), 기술등급 합계는 보유 직원 수(명)입니다. 동일 직원의 인원수는 중복 합산하지 않습니다. 필터 적용 시 합계가 함께 바뀝니다.</p>`;
 }
 async function showEmployeeDirectory(){
  const data=await fetchJSON('/api/directory');directoryRows=data.rows||[];
  const fields=[['workplace','사업장',r=>[r.workplace]],['department','부서',r=>[r.department]],['grade','기술등급',r=>r.grades.map(x=>x.grade)],['field','기술분야',r=>r.grades.map(x=>x.technical_field)],['certificate','국가기술자격',r=>r.certificates.map(x=>x.certificate_name)],['license','등록 면허',r=>r.licenses.map(x=>x.license_type)]];
- $$('body').innerHTML=`<section class="directory"><div class="directory-head"><div><h2>기술인력 보유현황표</h2><p class="muted">엑셀 샘플과 동일한 2단 제목·열 순서 · 한 직원 한 행 · 실시간 D1 조회</p></div><div class="directory-actions"><button id="dirAdd" type="button" class="primary">+ 직원 추가</button><button id="dirImport" type="button">엑셀 일괄 업로드</button><button id="dirReset" type="button">필터 초기화</button></div></div><div class="directory-filters"><label class="directory-search">통합검색<input id="dirSearch" type="search" placeholder="성명·부서·자격증·면허 검색"></label>${fields.map(([k,label,getter])=>controlSelect('dir_'+k,label,k==='workplace'?['오산본사','과천지사']:uniqOpts(directoryRows,getter))).join('')}</div><p class="muted" id="dirCount"></p><div id="dirResult"></div><p class="muted tiny">좌우로 스크롤하여 모든 열을 확인할 수 있습니다. '○'는 해당 등급의 보유 기록을 뜻합니다. 맨 아래 합계는 현재 필터 결과의 직원 수를 기준으로 자동 변경되며, 같은 등급 자격증을 여러 장 보유해도 1명으로 계산합니다. 한 사람이 서로 다른 등급을 가진 경우 각 등급에 각각 포함됩니다. 등록 면허 열에는 면허·업종등록 내역을 함께 표시합니다. 개인정보가 담긴 엑셀은 GitHub에 올리지 마세요.</p></section>`;
+ $$('body').innerHTML=`<section class="directory"><div class="directory-head"><div><h2>기술인력 보유현황표</h2><p class="muted">엑셀형 2단 제목 · 자격증별 개별 행 · 실시간 D1 조회</p></div><div class="directory-actions"><button id="dirAdd" type="button" class="primary">+ 직원 추가</button><button id="dirImport" type="button">엑셀 일괄 업로드</button><button id="dirReset" type="button">필터 초기화</button></div></div><div class="directory-filters"><label class="directory-search">통합검색<input id="dirSearch" type="search" placeholder="성명·부서·자격증·면허 검색"></label>${fields.map(([k,label,getter])=>controlSelect('dir_'+k,label,k==='workplace'?['오산본사','과천지사']:uniqOpts(directoryRows,getter))).join('')}</div><p class="muted" id="dirCount"></p><div id="dirResult"></div><p class="muted tiny">좌우로 스크롤하여 모든 열을 확인할 수 있습니다. '○'는 해당 등급의 보유 기록을 뜻합니다. 맨 아래 기술등급 합계는 직원 수(명), 자격증 등급 합계는 실제 자격증 개수(건)로 계산합니다. 한 사람이 서로 다른 등급을 가진 경우 각 등급에 각각 포함됩니다. 등록 면허 열에는 면허·업종등록 내역을 함께 표시합니다. 개인정보가 담긴 엑셀은 GitHub에 올리지 마세요.</p></section>`;
  $$('dirSearch').addEventListener('input',drawDirectory);fields.forEach(([key])=>$$('dir_'+key).addEventListener('change',drawDirectory));
  $$('dirAdd').onclick=()=>openEmployeeEditor();$$('dirImport').onclick=openImportModal;$$('dirResult').addEventListener('click',e=>{const target=e.target.closest('[data-edit-id]');if(target)openEmployeeEditor(directoryRows.find(r=>r.id===Number(target.dataset.editId)));});
  $$('dirReset').onclick=()=>{$$('dirSearch').value='';fields.forEach(([key])=>$$('dir_'+key).value='');drawDirectory()};drawDirectory();
