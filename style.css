@@ -70,3 +70,7 @@
 @media (max-width:1150px) {
   .dashboard-chart-grid > .trend-panel { height: auto; min-height: 390px; }
 }
+
+/* EMKO 회사 로고: PeopleOps 메뉴 상단 */
+.emko-logo-panel{background:#fff;border-radius:10px;padding:9px 10px;margin-bottom:17px;display:flex;align-items:center;justify-content:center;min-height:86px}
+.emko-logo{width:100%;max-width:192px;height:auto;max-height:82px;object-fit:contain;display:block}
