@@ -308,7 +308,7 @@ async function drawWorkplaceTrend(year){
   const a=result.months||[];
   if(a.length!==12)throw new Error('월별 사업장 자료를 확인할 수 없습니다.');
   const max=Math.max(1,...a.flatMap(d=>[d.osan,d.gwacheon]));
-  const W=720,H=254,L=40,R=15,T=26,B=37,PW=W-L-R,PH=H-T-B;
+  const W=840,H=260,L=43,R=20,T=29,B=42,PW=W-L-R,PH=H-T-B;
   const x=i=>L+(i+.5)*PW/12;
   const y=n=>T+PH*(1-n/max);
   const series=[{key:'osan',name:'오산본사',color:'#A6A1DE'},{key:'gwacheon',name:'과천지사',color:'#F3C58C'}];
@@ -323,6 +323,7 @@ async function drawWorkplaceTrend(year){
    }).join('')}`;
   }).join('');
   const rows=a.map(d=>`<tr><td>${d.month}월</td><td>${d.osan}명</td><td>${d.gwacheon}명</td><td>${d.unassigned}명</td></tr>`).join('');
-  target.innerHTML=`<div class="workplace-legend"><span><i style="background:#A6A1DE"></i>오산본사</span><span><i style="background:#F3C58C"></i>과천지사</span></div><div class="trend-scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${year}년 오산본사와 과천지사의 월말 재직 인원 비교">${grid}${curves}${labels}</svg></div><details class="trend-details"><summary>사업장별 월별 인원표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>오산본사</th><th>과천지사</th><th>사업장 미지정·기타</th></tr></thead><tbody>${rows}</tbody></table></div></details><p class="trend-note">※ 직원명부의 사업장을 기준으로 계산합니다. 사업장 미지정·기타 인원은 별도 표에서 확인할 수 있습니다.</p>`;
+  target.style.position='relative';
+  target.innerHTML=`<div class="workplace-legend" style="position:absolute;top:-24px;right:0;margin:0;z-index:1"><span><i style="background:#A6A1DE"></i>오산본사</span><span><i style="background:#F3C58C"></i>과천지사</span></div><div class="trend-scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${year}년 오산본사와 과천지사의 월말 재직 인원 비교">${grid}${curves}${labels}</svg></div><details class="trend-details"><summary>사업장별 월별 인원표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>오산본사</th><th>과천지사</th><th>사업장 미지정·기타</th></tr></thead><tbody>${rows}</tbody></table></div></details><p class="trend-note">※ 직원명부의 사업장을 기준으로 계산합니다. 사업장 미지정·기타 인원은 별도 표에서 확인할 수 있습니다.</p>`;
  }catch(e){if($$('workplaceChart'))$$('workplaceChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}
 }
