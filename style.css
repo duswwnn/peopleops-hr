@@ -213,3 +213,23 @@
 .hr-history-form button{grid-column:1/-1}
 @media(max-width:850px){.hr-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.hr-history-form{grid-template-columns:1fr}.hr-history-form label:nth-child(3){grid-column:auto}.hr-history-form button{grid-column:auto}}
+
+/* 인사관리 인사이트: 카드 4개, 최근 인사변동 5건 */
+.hr-kpis>.hr-kpi{display:flex;flex-direction:column;gap:7px;min-height:112px;justify-content:center}
+.hr-kpi-note{font-size:13px;color:#7b89a1}
+.hr-recent{border-top:1px solid #edf0f5;padding-top:16px}
+.hr-recent-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+.hr-recent-heading h4{margin:0}
+.hr-recent-scroll{overflow-x:auto}
+.hr-recent-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:16px}
+.hr-recent-table th,.hr-recent-table td{padding:11px 14px;text-align:left;border-bottom:1px solid #e8edf4}
+.hr-recent-table th{background:#f8f9fc;color:#34435d;font-weight:650}
+.hr-recent-table th:first-child{width:25%}
+.hr-recent-table th:nth-child(2){width:35%}
+.hr-event-label{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:#f0f1f6;font-size:13px}
+.hr-event-hire{background:#eaf5f2;color:#246e5c}
+.hr-event-leave{background:#fff1ed;color:#9b5548}
+.hr-event-transfer{background:#f0effd;color:#544c9e}
+.hr-anniversary-details{margin-top:16px}
+.hr-anniversary-details summary{cursor:pointer;color:#40517a;font-weight:600}
+.hr-anniversary-details .muted{font-size:13px}

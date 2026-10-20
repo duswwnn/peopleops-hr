@@ -374,16 +374,21 @@ async function openWorkplaceHistory(employee){
 async function loadHrInsights(){
  const box=$$('hrInsights');if(!box)return;
  try{
-  const result=await fetchJSON('/api/directory');
+  const d=await fetchJSON('/api/hr-insights');
   if(view!=='dashboard'||!$$('hrInsights'))return;
-  const rows=result.rows||[];const today=new Date().toLocaleDateString('en-CA');
-  const active=rows.filter(r=>r.hire_date&&r.hire_date<=today&&(!r.termination_date||r.termination_date>today));
-  const site=name=>active.filter(r=>String(r.workplace||'').trim()===name).length;
-  const osan=site('오산본사'),gwacheon=site('과천지사'),unassigned=active.length-osan-gwacheon;
-  const totalTenure=active.reduce((n,r)=>n+Math.max(0,(new Date(today+'T00:00:00')-new Date(r.hire_date+'T00:00:00'))/(86400000*365.2425)),0);
-  const avg=active.length?(totalTenure/active.length).toFixed(1):'0.0';
-  const departments=Object.entries(active.reduce((acc,r)=>{let key=String(r.department||'부서 미지정').trim()||'부서 미지정';acc[key]=(acc[key]||0)+1;return acc;},{})).sort((a,b)=>b[1]-a[1]);
-  const bars=departments.slice(0,6).map(([name,num])=>`<div class="hr-dept-row"><span title="${escapeHTML(name)}">${escapeHTML(name)}</span><div class="hr-progress"><div style="width:${active.length?(100*num/active.length):0}%"></div></div><strong>${num}명</strong></div>`).join('');
-  box.innerHTML=`<div class="hr-insight-title"><h3>인력 현황 분석</h3><span class="muted">${escapeHTML(today)} 기준 · 재직자</span></div><div class="hr-kpis"><div><small>오산본사</small><strong>${osan}명</strong></div><div><small>과천지사</small><strong>${gwacheon}명</strong></div><div><small>평균 근속기간</small><strong>${avg}년</strong></div><div><small>사업장 미지정</small><strong>${unassigned}명</strong></div></div><div class="hr-dept-panel"><h4>부서별 재직 인원</h4>${bars||'<p class="muted">등록된 재직자가 없습니다.</p>'}</div>`;
- }catch(err){if($$('hrInsights'))$$('hrInsights').innerHTML=`<p class="muted">추가 통계를 불러오지 못했습니다: ${escapeHTML(err.message)}</p>`;}
+  const entries=Array.isArray(d.recent)?d.recent:[];
+  const due=Array.isArray(d.anniversaries)?d.anniversaries:[];
+  const metric=(label,value,note,icon)=>`<div class="hr-kpi"><small>${icon} ${label}</small><strong>${value}</strong><span class="hr-kpi-note">${note}</span></div>`;
+  const types={hire:'입사',leave:'퇴사',transfer:'사업장 이동'};
+  const dateLabel=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'')?`${s.slice(5,7)}.${s.slice(8,10)}`:escapeHTML(s||'');
+  const recent=entries.length?`<div class="hr-recent-scroll"><table class="hr-recent-table"><thead><tr><th>날짜</th><th>직원</th><th>구분</th></tr></thead><tbody>${entries.map(r=>`<tr><td>${dateLabel(r.date)}</td><td>${escapeHTML(r.name)}</td><td><span class="hr-event-label hr-event-${escapeHTML(r.type)}">${types[r.type]||'기타'}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">최근 인사 변동 내역이 없습니다.</p>';
+  const detail=due.length?`<details class="hr-anniversary-details"><summary>입사 1주년 예정자 ${due.length}명 상세보기</summary><div class="hr-recent-scroll"><table class="hr-recent-table"><thead><tr><th>직원</th><th>입사일</th><th>1주년 예정일</th><th>부서</th></tr></thead><tbody>${due.map(r=>`<tr><td>${escapeHTML(r.name)}</td><td>${escapeHTML(r.hire_date)}</td><td>${escapeHTML(r.anniversary_date)}</td><td>${escapeHTML(r.department||'-')}</td></tr>`).join('')}</tbody></table></div><p class="muted">퇴직연금 가입 요건과 실제 가입 여부는 별도로 확인하세요.</p></details>`:'';
+  box.innerHTML=`<div class="hr-insight-title"><h3>인사관리 인사이트</h3><span class="muted">${escapeHTML(d.today)} 기준</span></div>
+   <div class="hr-kpis">
+    ${metric('올해 입사자',`${Number(d.hires)||0}명`,'1월~현재','↗')}
+    ${metric('올해 퇴사자',`${Number(d.leaves)||0}명`,'1월~현재','↘')}
+    ${metric('올해 사업장 이동',`${Number(d.transfers)||0}건`,'오산 ↔ 과천','⇄')}
+    ${metric('입사 1주년 예정',`${due.length}명`,'향후 30일 이내','◷')}
+   </div><section class="hr-recent"><div class="hr-recent-heading"><h4>최근 인사 변동 내역</h4><span class="muted">최근 5건</span></div>${recent}${detail}</section>`;
+ }catch(err){if($$('hrInsights'))$$('hrInsights').innerHTML=`<p class="muted">인사관리 인사이트를 불러오지 못했습니다: ${escapeHTML(err.message)}</p>`;}
 }
