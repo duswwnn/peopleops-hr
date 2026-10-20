@@ -31,7 +31,7 @@ function cellTags(values){return values.length?values.map(s=>`<span class="pill"
 function certificateType(x){
  const s=clean(x.certificate_name).replace(/\s+/g,'');
  const fallback=clean(x.certificate_level).replace(/\s+/g,'');
- const type=(t)=>t.includes('산업기사')?'산업기사':t.includes('기능장')?'기능장':t.includes('기술사')?'기술사':t.endsWith('기사')?'기사':'';
+ const type=(t)=>t.includes('산업기사')?'산업기사':t.includes('기능사')?'기능사':t.includes('기술사')?'기술사':t.endsWith('기사')?'기사':'';
  return type(s)||type(fallback);
 }
 function isDepartedEmployee(r){
@@ -82,7 +82,7 @@ function drawDirectory(){
  const keys=['workplace','department','grade','field','certificate','license'];
  const f=Object.fromEntries(keys.map(k=>[k,clean($$('dir_'+k).value)]));
  const filtered=matchingTechnicalCertificateRows(filterTechnicalEmployees(directoryRows,q,f),f.certificate);
- const marks=['산업기사','기사','기능장','기술사'];
+ const marks=['산업기사','기사','기능사','기술사'];
  const hasGrade=(r,g)=>r.grades.some(x=>clean(x.grade).includes(g));
  const countCertificates=g=>filtered.reduce((n,r)=>n+r.certificates.filter(c=>certificateType(c)===g).length,0);
  const uniqueCertPeople=g=>filtered.filter(r=>r.certificates.some(c=>certificateType(c)===g)).length;
@@ -113,7 +113,7 @@ function drawDirectory(){
     </tr>`;
   }).join('');
  };
- $$('dirResult').innerHTML=`<div class="excel-scroll"><table class="excel-directory"><colgroup><col style="width:120px"><col style="width:145px"><col style="width:110px"><col style="width:104px"><col style="width:112px">${Array(4).fill('<col style="width:67px">').join('')}<col style="width:188px">${Array(4).fill('<col style="width:75px">').join('')}<col style="width:245px"></colgroup><thead><tr class="group-header"><th rowspan="2">사 업 장</th><th rowspan="2">부 서</th><th rowspan="2">직 책</th><th rowspan="2">성 명</th><th colspan="5">건설기술인</th><th colspan="5">국가기술자격</th><th rowspan="2">등록 면허</th></tr><tr class="sub-header"><th>분야</th><th>초급</th><th>중급</th><th>고급</th><th>특급</th><th>자격증</th><th>산업기사</th><th>기사</th><th>기능장</th><th>기술사</th></tr></thead><tbody>${physicalRows?filtered.map(makeRows).join(''):'<tr><td class="empty-row" colspan="15">조회된 직원이 없습니다.</td></tr>'}</tbody><tfoot>${footer}</tfoot></table></div><p class="muted tiny">자격증은 1건당 1행으로 표시합니다. 기사·산업기사 합계는 자격증 개수(건), 기술등급 합계는 보유 직원 수(명)입니다. 동일 직원의 인원수는 중복 합산하지 않습니다. 필터 적용 시 합계가 함께 바뀝니다.</p>`;
+ $$('dirResult').innerHTML=`<div class="excel-scroll"><table class="excel-directory"><colgroup><col style="width:120px"><col style="width:145px"><col style="width:110px"><col style="width:104px"><col style="width:112px">${Array(4).fill('<col style="width:67px">').join('')}<col style="width:188px">${Array(4).fill('<col style="width:75px">').join('')}<col style="width:245px"></colgroup><thead><tr class="group-header"><th rowspan="2">사 업 장</th><th rowspan="2">부 서</th><th rowspan="2">직 책</th><th rowspan="2">성 명</th><th colspan="5">건설기술인</th><th colspan="5">국가기술자격</th><th rowspan="2">등록 면허</th></tr><tr class="sub-header"><th>분야</th><th>초급</th><th>중급</th><th>고급</th><th>특급</th><th>자격증</th><th>산업기사</th><th>기사</th><th>기능사</th><th>기술사</th></tr></thead><tbody>${physicalRows?filtered.map(makeRows).join(''):'<tr><td class="empty-row" colspan="15">조회된 직원이 없습니다.</td></tr>'}</tbody><tfoot>${footer}</tfoot></table></div><p class="muted tiny">자격증은 1건당 1행으로 표시합니다. 기사·산업기사 합계는 자격증 개수(건), 기술등급 합계는 보유 직원 수(명)입니다. 동일 직원의 인원수는 중복 합산하지 않습니다. 필터 적용 시 합계가 함께 바뀝니다.</p>`;
 }
 async function showEmployeeDirectory(){
  const data=await fetchJSON('/api/directory');directoryRows=data.rows||[];
@@ -249,9 +249,9 @@ function peopleOpsExcelRows(mode,rows){
   title:'직원명부',headers:['사번','사업장','부서','직책','성명','입사일','퇴사일','자격증 보유 건수'],
   records:rows.map(r=>[r.employee_no||'',r.workplace||'',r.department||'',r.job_title||'',r.name||'',r.hire_date||'',r.termination_date||'',r.certificates?.length||0])
  };
- const marks=['산업기사','기사','기능장','기술사'];
+ const marks=['산업기사','기사','기능사','기술사'];
  const hasGrade=(r,g)=>(r.grades||[]).some(x=>clean(x.grade).includes(g));
- const headers=['사업장','부서','직책','성명','건설기술인 분야','초급','중급','고급','특급','자격증','산업기사','기사','기능장','기술사','등록 면허'];
+ const headers=['사업장','부서','직책','성명','건설기술인 분야','초급','중급','고급','특급','자격증','산업기사','기사','기능사','기술사','등록 면허'];
  const records=[];
  for(const r of rows){
   const certs=r.certificates?.length?r.certificates:[null];
