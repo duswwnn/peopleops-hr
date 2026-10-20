@@ -133,3 +133,23 @@
         gap: 9px;
     }
 }
+
+
+/* 직원명부 및 기술인력 보유현황표: 표 안 텍스트만 확대 */
+.all-employees .directory-table,
+.all-employees .all-staff-table,
+.directory .excel-directory,
+.excel-directory {
+  font-size: 16px;
+}
+.all-employees .directory-table th,
+.all-employees .directory-table td,
+.all-employees .all-staff-table th,
+.all-employees .all-staff-table td,
+.excel-directory th,
+.excel-directory td {
+  font-size: 16px;
+  line-height: 1.6;
+}
+.excel-directory td.mark { font-size: 20px; }
+.excel-directory .repeat-mark { font-size: 15px; }
