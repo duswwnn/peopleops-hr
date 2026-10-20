@@ -18,7 +18,7 @@ export async function onRequestGet({request,env}){
   const cutoff=new Date(Date.parse(today+'T00:00:00Z')+30*86400000).toISOString().slice(0,10);
   const [employeeResponse,transferResponse]=await Promise.all([
    env.DB.prepare('SELECT id,name,hire_date,termination_date,department FROM employees').all(),
-   env.DB.prepare('SELECT employee_id,effective_date FROM workplace_transfers').all()
+   env.DB.prepare('SELECT employee_id,effective_date,from_workplace,to_workplace FROM workplace_transfers').all()
   ]);
   const employees=employeeResponse.results||[];
   const transferRows=transferResponse.results||[];
@@ -40,7 +40,7 @@ export async function onRequestGet({request,env}){
   const byId=new Map(employees.map(e=>[Number(e.id),e]));
   for(const t of transferRows){
    const person=byId.get(Number(t.employee_id));
-   if(person&&hasOccurred(t.effective_date))events.push({date:t.effective_date,name:person.name,type:'transfer',id:t.employee_id});
+   if(person&&hasOccurred(t.effective_date))events.push({date:t.effective_date,name:person.name,type:'transfer',id:t.employee_id,from_workplace:t.from_workplace||'',to_workplace:t.to_workplace||''});
   }
   events.sort((a,b)=>b.date.localeCompare(a.date)||({leave:0,transfer:1,hire:2}[a.type]-{leave:0,transfer:1,hire:2}[b.type])||Number(b.id)-Number(a.id));
   return json({today,hires,leaves,transfers,anniversaries,recent:events.slice(0,5)});
