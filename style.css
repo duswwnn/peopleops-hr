@@ -156,3 +156,16 @@
 
 /* 대시보드 입사자·퇴사자 표만 글자 2px 확대 */
 #hires table, #leaves table { font-size: 17px; }
+
+
+/* 대시보드 입사자/퇴사자: 성명 · 날짜 · 부서 동일 열 너비/위치 */
+#hires table, #leaves table {
+  width: 100%;
+  table-layout: fixed;
+}
+#hires table th:nth-child(1), #hires table td:nth-child(1),
+#leaves table th:nth-child(1), #leaves table td:nth-child(1) { width: 30%; }
+#hires table th:nth-child(2), #hires table td:nth-child(2),
+#leaves table th:nth-child(2), #leaves table td:nth-child(2) { width: 30%; }
+#hires table th:nth-child(3), #hires table td:nth-child(3),
+#leaves table th:nth-child(3), #leaves table td:nth-child(3) { width: 40%; }
