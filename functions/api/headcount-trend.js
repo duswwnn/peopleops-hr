@@ -19,7 +19,7 @@ export async function onRequestGet({request,env}) {
          WHERE e.hire_date IS NOT NULL
            AND date(e.hire_date) <= date(b.start_date, '+1 month', '-1 day')
            AND (e.termination_date IS NULL OR trim(e.termination_date) = ''
-                OR date(e.termination_date) > date(b.start_date, '+1 month', '-1 day'))
+                OR date(e.termination_date) >= date(b.start_date, '+1 month', '-1 day'))
         ) AS headcount,
         (SELECT COUNT(*) FROM employees e
          WHERE e.hire_date >= b.start_date

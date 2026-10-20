@@ -15,7 +15,7 @@ export async function onRequestGet({request,env}){
        ORDER BY t.effective_date ASC LIMIT 1),COALESCE(e.workplace,'')) AS site
     FROM bounds b JOIN employees e
       ON e.hire_date IS NOT NULL AND date(e.hire_date)<=b.month_end
-      AND (e.termination_date IS NULL OR trim(e.termination_date)='' OR date(e.termination_date)>b.month_end)
+      AND (e.termination_date IS NULL OR trim(e.termination_date)='' OR date(e.termination_date)>=b.month_end)
    )
    SELECT m.n AS month,
     COALESCE(SUM(CASE WHEN d.site='오산본사' THEN 1 ELSE 0 END),0) AS osan,
