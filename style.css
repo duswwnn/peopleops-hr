@@ -169,3 +169,25 @@
 #leaves table th:nth-child(2), #leaves table td:nth-child(2) { width: 30%; }
 #hires table th:nth-child(3), #hires table td:nth-child(3),
 #leaves table th:nth-child(3), #leaves table td:nth-child(3) { width: 40%; }
+
+
+/* PC: 좌측 메뉴는 화면에 고정, 우측 본문은 페이지 스크롤 */
+@media (min-width: 751px) {
+  .shell > aside {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    align-self: flex-start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* 모바일에서는 메뉴가 내용을 가리지 않도록 기존 배치 유지 */
+@media (max-width: 750px) {
+  .shell > aside {
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+}
