@@ -71,6 +71,30 @@
   .dashboard-chart-grid > .trend-panel { height: auto; min-height: 390px; }
 }
 
-/* EMKO 회사 로고: PeopleOps 메뉴 상단 */
-.emko-logo-panel{background:#fff;border-radius:10px;padding:9px 10px;margin-bottom:17px;display:flex;align-items:center;justify-content:center;min-height:86px}
-.emko-logo{width:100%;max-width:192px;height:auto;max-height:82px;object-fit:contain;display:block}
+
+/* 월별 전체 / 사업장별 그래프의 세로 시작 위치 정렬 */
+.dashboard-chart-grid .trend-heading {
+    min-height: 72px;
+    align-items: flex-start;
+}
+.dashboard-chart-grid .trend-chart {
+    position: relative;
+    margin-top: 8px;
+}
+.dashboard-chart-grid .workplace-legend {
+    position: absolute;
+    top: -24px;
+    right: 0;
+    margin: 0;
+    z-index: 1;
+}
+@media (max-width: 640px) {
+    .dashboard-chart-grid .trend-heading {
+        min-height: 90px;
+    }
+    .dashboard-chart-grid .workplace-legend {
+        top: -24px;
+        font-size: 11px;
+        gap: 9px;
+    }
+}
