@@ -191,3 +191,25 @@
     overflow: visible;
   }
 }
+
+/* 인사 통계 및 사업장 이동 이력 */
+.hr-insights{margin:16px 0;padding:20px;border:1px solid #e1e7f1;border-radius:14px;background:#fff}
+.hr-insight-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hr-insight-title h3{margin:0}
+.hr-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:15px 0 20px}
+.hr-kpis>div{border-radius:10px;background:#f5f4fd;padding:15px}
+.hr-kpis small{display:block;color:#69778c;font-size:13px}
+.hr-kpis strong{font-size:23px;color:#253653}
+.hr-dept-panel{border-top:1px solid #edf0f5;padding-top:12px}
+.hr-dept-panel h4{margin:2px 0 12px}
+.hr-dept-row{display:grid;grid-template-columns:minmax(85px,145px) minmax(100px,1fr) 50px;gap:12px;align-items:center;margin:8px 0;font-size:14px}
+.hr-dept-row>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hr-progress{background:#ecedf5;height:10px;border-radius:999px;overflow:hidden}
+.hr-progress>div{background:#a6a1de;height:100%;border-radius:999px}
+.hr-history-card{max-width:650px;max-height:88vh;overflow:auto}
+.hr-history-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0}
+.hr-history-form label{display:flex;flex-direction:column;gap:5px}
+.hr-history-form label:nth-child(3){grid-column:1/-1}
+.hr-history-form button{grid-column:1/-1}
+@media(max-width:850px){.hr-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.hr-history-form{grid-template-columns:1fr}.hr-history-form label:nth-child(3){grid-column:auto}.hr-history-form button{grid-column:auto}}

@@ -2,7 +2,7 @@ const $$=id=>document.getElementById(id);let me=null;let view='dashboard';
 function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function fetchJSON(url){const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);return r.json();}
 function table(rows, koreanHeaders=false){if(!rows.length)return '<p class="muted">등록된 자료가 없습니다.</p>';const keys=Object.keys(rows[0]);const labels={name:'성명',hire_date:'입사일',termination_date:'퇴사일',department:'부서'};return `<div class="panel"><table><thead><tr>${keys.map(k=>`<th>${escapeHTML(koreanHeaders?(labels[k]||k):k)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${keys.map(k=>`<td>${escapeHTML(row[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
-async function load(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===v));const titles={dashboard:'종합 대시보드',employees:'직원명부',technical_staff:'기술인력 보유현황표',certificates:'자격증',technical:'기술등급',licenses:'보유 면허',industries:'업종 등록',users:'인사팀 계정'};$$('title').textContent=titles[v];$$('body').textContent='자료를 조회하고 있습니다…';try{if(v==='dashboard'){const m=new Date().toISOString().slice(0,7);const d=await fetchJSON('/api/summary?month='+m);$$('body').innerHTML=`<div class="cards"><div class="card"><small>등록 직원</small><strong>${d.employees}명</strong></div><div class="card"><small>${escapeHTML(m)} 월말 재직</small><strong>${d.monthEnd}명</strong></div><div class="card"><small>입사</small><strong>${d.hires.length}명</strong></div><div class="card"><small>퇴사</small><strong>${d.leaves.length}명</strong></div></div><div class="dashboard-chart-grid"><section class="trend-panel"><div class="trend-heading"><div><h3>월별 재직 인원 추이</h3><p class="muted">각 월 말일 기준 · 입사일과 퇴사일로 계산</p></div><div class="trend-actions"><label>조회 연도 <select id="trendYear"></select></label><button type="button" id="downloadTrendExcel" class="export-excel">엑셀 다운로드 (.xlsx)</button></div></div><div id="trendChart" class="trend-chart"><p class="muted">인원 추이를 불러오고 있습니다…</p></div></section><section class="trend-panel workplace-panel"><div class="trend-heading"><div><h3>사업장별 월말 재직 인원</h3><p class="muted">오산본사 · 과천지사 비교</p></div><span id="workplaceYearLabel" class="muted"></span></div><div id="workplaceChart" class="trend-chart"><p class="muted">사업장별 인원을 불러오는 중입니다…</p></div></section></div><section><div class="toolbar"><label>조회 월 <input id="month" type="month" value="${m}"></label><button id="monthGo">조회</button></div><h3>입사자</h3><div id="hires">${table(d.hires,true)}</div><h3>퇴사자</h3><div id="leaves">${table(d.leaves,true)}</div></section>`;$$('monthGo').onclick=async()=>{try{const z=await fetchJSON('/api/summary?month='+$$('month').value);$$('hires').innerHTML=table(z.hires,true);$$('leaves').innerHTML=table(z.leaves,true);}catch(e){alert(e.message)}};await initHeadcountTrend();return;}
+async function load(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===v));const titles={dashboard:'종합 대시보드',employees:'직원명부',technical_staff:'기술인력 보유현황표',certificates:'자격증',technical:'기술등급',licenses:'보유 면허',industries:'업종 등록',users:'인사팀 계정'};$$('title').textContent=titles[v];$$('body').textContent='자료를 조회하고 있습니다…';try{if(v==='dashboard'){const m=new Date().toISOString().slice(0,7);const d=await fetchJSON('/api/summary?month='+m);$$('body').innerHTML=`<div class="cards"><div class="card"><small>등록 직원</small><strong>${d.employees}명</strong></div><div class="card"><small>${escapeHTML(m)} 월말 재직</small><strong>${d.monthEnd}명</strong></div><div class="card"><small>입사</small><strong>${d.hires.length}명</strong></div><div class="card"><small>퇴사</small><strong>${d.leaves.length}명</strong></div></div><div id="hrInsights" class="hr-insights"><p class="muted">추가 인사 통계를 불러오는 중입니다…</p></div><div class="dashboard-chart-grid"><section class="trend-panel"><div class="trend-heading"><div><h3>월별 재직 인원 추이</h3><p class="muted">각 월 말일 기준 · 입사일과 퇴사일로 계산</p></div><div class="trend-actions"><label>조회 연도 <select id="trendYear"></select></label><button type="button" id="downloadTrendExcel" class="export-excel">엑셀 다운로드 (.xlsx)</button></div></div><div id="trendChart" class="trend-chart"><p class="muted">인원 추이를 불러오고 있습니다…</p></div></section><section class="trend-panel workplace-panel"><div class="trend-heading"><div><h3>사업장별 월말 재직 인원</h3><p class="muted">오산본사 · 과천지사 비교</p></div><span id="workplaceYearLabel" class="muted"></span></div><div id="workplaceChart" class="trend-chart"><p class="muted">사업장별 인원을 불러오는 중입니다…</p></div></section></div><section><div class="toolbar"><label>조회 월 <input id="month" type="month" value="${m}"></label><button id="monthGo">조회</button></div><h3>입사자</h3><div id="hires">${table(d.hires,true)}</div><h3>퇴사자</h3><div id="leaves">${table(d.leaves,true)}</div></section>`;$$('monthGo').onclick=async()=>{try{const z=await fetchJSON('/api/summary?month='+$$('month').value);$$('hires').innerHTML=table(z.hires,true);$$('leaves').innerHTML=table(z.leaves,true);}catch(e){alert(e.message)}};await Promise.all([initHeadcountTrend(),loadHrInsights()]);return;}
 if(v==='users'){if(me.role!=='admin'){throw new Error('공용 비밀번호에서는 사용자 관리 기능이 비활성화되어 있습니다.')}const d=await fetchJSON('/api/admin-users');$$('body').innerHTML=table(d.rows);return;}
 if(v==='employees'){await showAllEmployees();return;}
 if(v==='technical_staff'){await showEmployeeDirectory();return;}
@@ -114,13 +114,13 @@ async function showAllEmployees(){
   const q=clean($$('allSearch').value).toLowerCase(),site=$$('allWorkplace').value,status=$$('allStatus').value;
   const rows=filterAllEmployees(directoryRows,q,site,status);
   $$('allCount').textContent=`조회 ${rows.length}명 / 전체 ${directoryRows.length}명`;
-  $$('allResult').innerHTML=`<table class="excel-directory all-staff-table"><thead><tr><th>사번</th><th>사업장</th><th>부서</th><th>직책</th><th>성명</th><th>입사일</th><th>퇴사일</th><th>자격증</th><th>정보 수정</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr><td>${textOrDash(r.employee_no)}</td><td>${textOrDash(r.workplace)}</td><td>${textOrDash(r.department)}</td><td>${textOrDash(r.job_title)}</td><td>${escapeHTML(r.name)}</td><td>${textOrDash(r.hire_date)}</td><td>${textOrDash(r.termination_date)}</td><td>${r.certificates?.length||0}건</td><td><button class="employee-link" data-edit-id="${r.id}">수정</button></td></tr>`).join(''):'<tr><td colspan="9">조회된 직원이 없습니다.</td></tr>'}</tbody></table>`;
+  $$('allResult').innerHTML=`<table class="excel-directory all-staff-table"><thead><tr><th>사번</th><th>사업장</th><th>부서</th><th>직책</th><th>성명</th><th>입사일</th><th>퇴사일</th><th>자격증</th><th>사업장 이동</th><th>정보 수정</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr><td>${textOrDash(r.employee_no)}</td><td>${textOrDash(r.workplace)}</td><td>${textOrDash(r.department)}</td><td>${textOrDash(r.job_title)}</td><td>${escapeHTML(r.name)}</td><td>${textOrDash(r.hire_date)}</td><td>${textOrDash(r.termination_date)}</td><td>${r.certificates?.length||0}건</td><td><button class="employee-link" data-transfer-id="${r.id}">이력 관리</button></td><td><button class="employee-link" data-edit-id="${r.id}">수정</button></td></tr>`).join(''):'<tr><td colspan="10">조회된 직원이 없습니다.</td></tr>'}</tbody></table>`;
  };
  ['allSearch','allWorkplace','allStatus'].forEach(id=>$$ (id).addEventListener(id==='allSearch'?'input':'change',draw));
  $$('allAdd').onclick=()=>openEmployeeEditor();$$('allImport').onclick=openImportModal;
  $$('allExportAll').onclick=()=>exportPeopleOpsExcel('employees',false,$$('allExportAll'));
  $$('allExportFiltered').onclick=()=>exportPeopleOpsExcel('employees',true,$$('allExportFiltered'));
- $$('allResult').addEventListener('click',e=>{let t=e.target.closest('[data-edit-id]');if(t)openEmployeeEditor(directoryRows.find(r=>r.id===Number(t.dataset.editId)))});
+ $$('allResult').addEventListener('click',e=>{const transfer=e.target.closest('[data-transfer-id]');if(transfer){openWorkplaceHistory(directoryRows.find(r=>r.id===Number(transfer.dataset.transferId)));return;}let t=e.target.closest('[data-edit-id]');if(t)openEmployeeEditor(directoryRows.find(r=>r.id===Number(t.dataset.editId)))});
  draw();
 }
 
@@ -334,4 +334,56 @@ async function drawWorkplaceTrend(year){
   target.style.position='relative';
   target.innerHTML=`<div class="workplace-legend" style="position:absolute;top:-24px;right:0;margin:0;z-index:1"><span><i style="background:#A6A1DE"></i>오산본사</span><span><i style="background:#F3C58C"></i>과천지사</span></div><div class="trend-scroll"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:240px;display:block" role="img" aria-label="${year}년 오산본사와 과천지사의 월말 재직 인원 비교">${grid}${curves}${labels}</svg></div><details class="trend-details"><summary>사업장별 월별 인원표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>오산본사</th><th>과천지사</th><th>사업장 미지정·기타</th></tr></thead><tbody>${rows}</tbody></table></div></details><p class="trend-note">※ 직원명부의 사업장을 기준으로 계산합니다. 사업장 미지정·기타 인원은 별도 표에서 확인할 수 있습니다.</p>`;
  }catch(e){if($$('workplaceChart'))$$('workplaceChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}
+}
+
+
+// 인사발령: 직원 원본은 유지하고 별도의 사업장 이동 이력에 날짜별 이동 기록을 저장합니다.
+async function openWorkplaceHistory(employee){
+ if(!employee)return;
+ document.getElementById('historyModal')?.remove();
+ const dialog=document.createElement('div');dialog.id='historyModal';dialog.className='modal-shade';
+ dialog.innerHTML=`<div class="editor-card hr-history-card"><div class="editor-top"><h2>${escapeHTML(employee.name)} · 사업장 이동 이력</h2><button type="button" data-close-history>✕</button></div>
+ <p class="muted">현재 사업장: <strong>${escapeHTML(employee.workplace||'미지정')}</strong> · 이동일을 기준으로 과거 월별 인원이 계산됩니다.</p>
+ <div id="historyList"><p class="muted">이력을 조회하는 중입니다…</p></div>
+ <form id="historyForm" class="hr-history-form"><label>이동일<input type="date" name="effective_date" required></label><label>이동할 사업장<select name="to_workplace" required><option value="">선택</option><option value="오산본사">오산본사</option><option value="과천지사">과천지사</option></select></label><label>발령 메모 (선택)<input name="notes" maxlength="200" placeholder="예: 지사 전근"></label><button class="primary" type="submit">이동 이력 등록</button></form>
+ <p class="muted tiny">과거 이력 수정·삭제는 현재 지원하지 않습니다. 잘못 입력한 경우 관리자 확인 후 데이터 정정이 필요합니다. 같은 직원의 이동은 날짜 순서대로 등록하세요.</p></div>`;
+ document.body.appendChild(dialog);
+ dialog.querySelector('[data-close-history]').onclick=()=>dialog.remove();
+ dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.remove()});
+ async function refresh(){
+  try{
+   const d=await fetchJSON('/api/workplace-history?employee_id='+employee.id);
+   const records=d.rows||[];
+   dialog.querySelector('#historyList').innerHTML=records.length?`<div class="trend-table-scroll"><table><thead><tr><th>이동일</th><th>이전 사업장</th><th>새 사업장</th><th>메모</th></tr></thead><tbody>${records.map(r=>`<tr><td>${escapeHTML(r.effective_date)}</td><td>${escapeHTML(r.from_workplace||'미지정')}</td><td>${escapeHTML(r.to_workplace)}</td><td>${escapeHTML(r.notes||'')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">등록된 이동 이력이 없습니다.</p>';
+  }catch(e){dialog.querySelector('#historyList').innerHTML=`<p class="error">${escapeHTML(e.message)} · D1 마이그레이션을 먼저 실행해 주세요.</p>`;}
+ }
+ dialog.querySelector('#historyForm').onsubmit=async e=>{
+  e.preventDefault();const form=e.currentTarget;const submit=form.querySelector('button[type=submit]');submit.disabled=true;
+  try{
+   const payload={employee_id:employee.id,effective_date:form.elements.effective_date.value,to_workplace:form.elements.to_workplace.value,notes:form.elements.notes.value};
+   const res=await fetch('/api/workplace-history',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
+   const result=await res.json();if(!res.ok)throw new Error(result.error||'이동 이력 저장 실패');
+   await refresh();form.reset();
+   await showAllEmployees(); // 직원명부에 최신 사업장 반영
+   alert('사업장 이동 이력이 등록되었습니다. 월별 그래프에도 반영됩니다.');
+  }catch(err){alert(err.message)}finally{submit.disabled=false;}
+ };
+ await refresh();
+}
+
+async function loadHrInsights(){
+ const box=$$('hrInsights');if(!box)return;
+ try{
+  const result=await fetchJSON('/api/directory');
+  if(view!=='dashboard'||!$$('hrInsights'))return;
+  const rows=result.rows||[];const today=new Date().toLocaleDateString('en-CA');
+  const active=rows.filter(r=>r.hire_date&&r.hire_date<=today&&(!r.termination_date||r.termination_date>today));
+  const site=name=>active.filter(r=>String(r.workplace||'').trim()===name).length;
+  const osan=site('오산본사'),gwacheon=site('과천지사'),unassigned=active.length-osan-gwacheon;
+  const totalTenure=active.reduce((n,r)=>n+Math.max(0,(new Date(today+'T00:00:00')-new Date(r.hire_date+'T00:00:00'))/(86400000*365.2425)),0);
+  const avg=active.length?(totalTenure/active.length).toFixed(1):'0.0';
+  const departments=Object.entries(active.reduce((acc,r)=>{let key=String(r.department||'부서 미지정').trim()||'부서 미지정';acc[key]=(acc[key]||0)+1;return acc;},{})).sort((a,b)=>b[1]-a[1]);
+  const bars=departments.slice(0,6).map(([name,num])=>`<div class="hr-dept-row"><span title="${escapeHTML(name)}">${escapeHTML(name)}</span><div class="hr-progress"><div style="width:${active.length?(100*num/active.length):0}%"></div></div><strong>${num}명</strong></div>`).join('');
+  box.innerHTML=`<div class="hr-insight-title"><h3>인력 현황 분석</h3><span class="muted">${escapeHTML(today)} 기준 · 재직자</span></div><div class="hr-kpis"><div><small>오산본사</small><strong>${osan}명</strong></div><div><small>과천지사</small><strong>${gwacheon}명</strong></div><div><small>평균 근속기간</small><strong>${avg}년</strong></div><div><small>사업장 미지정</small><strong>${unassigned}명</strong></div></div><div class="hr-dept-panel"><h4>부서별 재직 인원</h4>${bars||'<p class="muted">등록된 재직자가 없습니다.</p>'}</div>`;
+ }catch(err){if($$('hrInsights'))$$('hrInsights').innerHTML=`<p class="muted">추가 통계를 불러오지 못했습니다: ${escapeHTML(err.message)}</p>`;}
 }
