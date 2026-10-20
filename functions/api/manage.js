@@ -38,6 +38,27 @@ async function saveOne(db,entry,mode){
  statements.push(db.prepare('INSERT INTO audit_logs(actor_email,action,entity_type,entity_id,details) VALUES(?,?,?,?,?)').bind('shared-admin','upsert','employee',targetId,JSON.stringify({name:e.name,mode,detailKeys:detail.filter(d=>entry[d[0]]!==undefined).map(d=>d[0])})));
  await db.batch(statements);return {status:found?'updated':'created',id:targetId};
 }
+
+async function deleteEmployee(db, data){
+ const id=Number(data.employee_id);
+ if(!Number.isSafeInteger(id)||id<1)return json({error:'직원 번호가 올바르지 않습니다.'},400);
+ const employee=await db.prepare('SELECT id,name,employee_no FROM employees WHERE id=?').bind(id).first();
+ if(!employee)return json({error:'해당 직원이 존재하지 않습니다.'},404);
+ if(!data.confirm_name||String(data.confirm_name).trim()!==String(employee.name).trim())return json({error:'삭제 확인을 위한 직원 이름이 일치하지 않습니다.'},400);
+ // Delete dependent records first to satisfy foreign keys; transactionality provided by D1 batch.
+ const statements=[
+  db.prepare('DELETE FROM workplace_transfers WHERE employee_id=?').bind(id),
+  db.prepare('DELETE FROM certificates WHERE employee_id=?').bind(id),
+  db.prepare('DELETE FROM technical_grades WHERE employee_id=?').bind(id),
+  db.prepare('DELETE FROM licenses WHERE employee_id=?').bind(id),
+  db.prepare('DELETE FROM industry_registrations WHERE employee_id=?').bind(id),
+  db.prepare('DELETE FROM employees WHERE id=? AND name=?').bind(id,employee.name),
+  db.prepare('INSERT INTO audit_logs(actor_email,action,entity_type,entity_id,details) VALUES(?,?,?,?,?)').bind('shared-admin','delete','employee',id,JSON.stringify({name:employee.name,employee_no:employee.employee_no||'',reason:'등록 오류 정정'}))
+ ];
+ await db.batch(statements);
+ return json({ok:true,deleted_id:id});
+}
+
 export async function onRequestPost({request,env}){
  try{
   await authenticate(request,env);
@@ -45,6 +66,7 @@ export async function onRequestPost({request,env}){
   if(!(request.headers.get('Content-Type')||'').includes('application/json'))return json({error:'JSON만 허용합니다.'},415);
   if(Number(request.headers.get('Content-Length')||0)>180000)return json({error:'한 번에 보내는 데이터가 너무 큽니다.'},413);
   const data=await request.json();
+  if(data.action==='delete')return await deleteEmployee(env.DB,data);
   if(data.action==='save')return json({ok:true,result:await saveOne(env.DB,data.employee,data.mode||'upsert')});
   if(data.action==='import'){
    if(!Array.isArray(data.rows)||data.rows.length<1||data.rows.length>10)return json({error:'한 번에 1~10명씩 등록할 수 있습니다.'},400);
