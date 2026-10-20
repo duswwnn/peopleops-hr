@@ -278,3 +278,7 @@
   pointer-events: none;
 }
 @media (min-width: 751px) { .shell > aside { position: sticky; } }
+
+/* 관리자 로그인 상태 안내 문구는 화면에서만 숨김 (인증 로직 유지) */
+.shell > aside > p.muted { display: none !important; }
+.shell .top #identity { display: none !important; }
