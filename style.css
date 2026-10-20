@@ -238,3 +238,18 @@
 .hr-recent-bottom{margin-top:20px;padding:20px;border:1px solid #e1e7f1;border-radius:14px;background:#fff}
 .hr-recent-bottom .hr-recent-heading h3{margin:0;font-size:20px}
 .hr-recent-bottom .hr-recent-table{font-size:17px}
+
+/* 왼쪽 메뉴 하단: 회사 시스템 서명만 추가 (다른 디자인 유지) */
+.shell > aside nav::after {
+  content: "EMKO · HR Management";
+  display: block;
+  margin: 25px 0 0;
+  padding: 15px 10px 0;
+  border-top: 1px solid rgba(202, 214, 231, .20);
+  color: #AABAD0;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: .01em;
+  line-height: 1.6;
+  text-align: left;
+}
