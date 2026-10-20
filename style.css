@@ -253,3 +253,7 @@
   line-height: 1.6;
   text-align: left;
 }
+
+/* 기술인력 보유현황표: 첫 행과 추가 자격증 행의 자격증명 글씨 굵기 통일 */
+.excel-directory tbody tr.person-first td.certificate-col,
+.excel-directory tbody tr.person-continuation td.certificate-col { font-weight: 400; }
