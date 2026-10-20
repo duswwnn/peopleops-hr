@@ -289,9 +289,9 @@ async function drawHeadcountTrend(year){
    return `<line x1="${left}" y1="${yy}" x2="${width-right}" y2="${yy}" stroke="#e5eaf0"/><text x="${left-8}" y="${yy+4}" text-anchor="end" font-size="12" fill="#64748b">${level}</text>`;
   }).join('');
   const labels=months.map((d,i)=>`<text x="${x(i)}" y="${height-18}" text-anchor="middle" font-size="12" fill="#475569">${d.month}월</text>`).join('');
-  const dots=months.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.headcount)}" r="5" fill="#235a96"><title>${d.month}월 말 ${d.headcount}명</title></circle><text x="${x(i)}" y="${Math.max(13,y(d.headcount)-11)}" text-anchor="middle" font-size="12" fill="#142c49">${d.headcount}</text>`).join('');
+  const dots=months.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.headcount)}" r="5" fill="#A6A1DE"><title>${d.month}월 말 ${d.headcount}명</title></circle><text x="${x(i)}" y="${Math.max(13,y(d.headcount)-11)}" text-anchor="middle" font-size="12" fill="#142c49">${d.headcount}</text>`).join('');
   const lines=months.map((d,i)=>`<tr><td>${d.month}월</td><td>${d.headcount}명</td><td>${d.hires}명</td><td>${d.leaves}명</td><td>${i===0?'–':((d.headcount-months[i-1].headcount)>0?'+':'')+(d.headcount-months[i-1].headcount)+'명'}</td></tr>`).join('');
-  target.innerHTML=`<div class="trend-scroll"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${year}년 1월부터 12월까지 월말 재직 인원 꺾은선 그래프">${grid}<polyline points="${points}" fill="none" stroke="#235a96" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${labels}</svg></div><details class="trend-details"><summary>월별 인원 상세표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>월말 재직</th><th>입사</th><th>퇴사</th><th>전월 대비</th></tr></thead><tbody>${lines}</tbody></table></div></details><p class="trend-note">※ 말일에 퇴사한 직원은 그 달 월말 재직 인원에서 제외합니다. 미래 월은 등록된 입·퇴사 예정일을 반영한 예상치입니다.</p>`;
+  target.innerHTML=`<div class="trend-scroll"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${year}년 1월부터 12월까지 월말 재직 인원 꺾은선 그래프">${grid}<polyline points="${points}" fill="none" stroke="#A6A1DE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${labels}</svg></div><details class="trend-details"><summary>월별 인원 상세표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>월말 재직</th><th>입사</th><th>퇴사</th><th>전월 대비</th></tr></thead><tbody>${lines}</tbody></table></div></details><p class="trend-note">※ 말일에 퇴사한 직원은 그 달 월말 재직 인원에서 제외합니다. 미래 월은 등록된 입·퇴사 예정일을 반영한 예상치입니다.</p>`;
  }catch(e){if($$('trendChart'))$$('trendChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}
 }
 
@@ -311,7 +311,7 @@ async function drawWorkplaceTrend(year){
   const W=720,H=254,L=40,R=15,T=26,B=37,PW=W-L-R,PH=H-T-B;
   const x=i=>L+(i+.5)*PW/12;
   const y=n=>T+PH*(1-n/max);
-  const series=[{key:'osan',name:'오산본사',color:'#2563a6'},{key:'gwacheon',name:'과천지사',color:'#e48b36'}];
+  const series=[{key:'osan',name:'오산본사',color:'#A6A1DE'},{key:'gwacheon',name:'과천지사',color:'#F3C58C'}];
   const grid=[0,.25,.5,.75,1].map(t=>`<line x1="${L}" y1="${y(max*t)}" x2="${W-R}" y2="${y(max*t)}" stroke="#e5eaf0"/><text x="${L-8}" y="${y(max*t)+4}" text-anchor="end" font-size="12" fill="#64748b">${Math.round(max*t)}</text>`).join('');
   const labels=a.map((d,i)=>`<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="12" fill="#475569">${d.month}월</text>`).join('');
   const curves=series.map(s=>{
@@ -323,6 +323,6 @@ async function drawWorkplaceTrend(year){
    }).join('')}`;
   }).join('');
   const rows=a.map(d=>`<tr><td>${d.month}월</td><td>${d.osan}명</td><td>${d.gwacheon}명</td><td>${d.unassigned}명</td></tr>`).join('');
-  target.innerHTML=`<div class="workplace-legend"><span><i style="background:#2563a6"></i>오산본사</span><span><i style="background:#e48b36"></i>과천지사</span></div><div class="trend-scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${year}년 오산본사와 과천지사의 월말 재직 인원 비교">${grid}${curves}${labels}</svg></div><details class="trend-details"><summary>사업장별 월별 인원표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>오산본사</th><th>과천지사</th><th>사업장 미지정·기타</th></tr></thead><tbody>${rows}</tbody></table></div></details><p class="trend-note">※ 직원명부의 사업장을 기준으로 계산합니다. 사업장 미지정·기타 인원은 별도 표에서 확인할 수 있습니다.</p>`;
+  target.innerHTML=`<div class="workplace-legend"><span><i style="background:#A6A1DE"></i>오산본사</span><span><i style="background:#F3C58C"></i>과천지사</span></div><div class="trend-scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${year}년 오산본사와 과천지사의 월말 재직 인원 비교">${grid}${curves}${labels}</svg></div><details class="trend-details"><summary>사업장별 월별 인원표 보기</summary><div class="trend-table-scroll"><table><thead><tr><th>월</th><th>오산본사</th><th>과천지사</th><th>사업장 미지정·기타</th></tr></thead><tbody>${rows}</tbody></table></div></details><p class="trend-note">※ 직원명부의 사업장을 기준으로 계산합니다. 사업장 미지정·기타 인원은 별도 표에서 확인할 수 있습니다.</p>`;
  }catch(e){if($$('workplaceChart'))$$('workplaceChart').innerHTML=`<div class="error">${escapeHTML(e.message)}</div>`;}
 }
