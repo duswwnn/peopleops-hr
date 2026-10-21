@@ -304,7 +304,7 @@
 .hr-schedule-group>.muted{margin:8px 0 0}
 
 /* 인사업무 예정일정 상세보기: 월별 인원 상세표 보기와 동일한 글씨 스타일 */
-.hr-schedule-integrated > summary {font-size:18px;line-height:normal;font-weight:600;color:#235a96;cursor:pointer;padding:10px 0;}
+.hr-schedule-integrated > summary {font-size:17px;line-height:normal;font-weight:600;color:#235a96;cursor:pointer;padding:10px 0;}
 
 /* 인사업무 예정일정: 항목별 상세표 사이의 공백만 축소 */
 .hr-schedule-integrated-body { gap: 4px; }
