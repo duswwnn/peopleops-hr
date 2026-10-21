@@ -4,11 +4,10 @@ async function fetchJSON(url){const r=await fetch(url,{credentials:'same-origin'
 function table(rows, koreanHeaders=false){if(!rows.length)return '<p class="muted">등록된 자료가 없습니다.</p>';const keys=Object.keys(rows[0]);const labels={name:'성명',hire_date:'입사일',termination_date:'퇴사일',department:'부서'};return `<div class="panel"><table><thead><tr>${keys.map(k=>`<th>${escapeHTML(koreanHeaders?(labels[k]||k):k)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${keys.map(k=>`<td>${escapeHTML(row[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
 async function load(v){view=v;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===v));const titles={dashboard:'종합 대시보드',employees:'직원명부',technical_staff:'기술인력 보유현황표',certificates:'자격증',technical:'기술등급',licenses:'보유 면허',industries:'업종 등록',users:'인사팀 계정'};$$('title').textContent=titles[v];$$('body').textContent='자료를 조회하고 있습니다…';try{if(v==='dashboard'){
  $$('body').innerHTML=`<div id="hrInsights" class="hr-insights"><p class="muted">추가 인사 통계를 불러오는 중입니다…</p></div>
- <section class="hr-schedule-panel"><div class="hr-schedule-head"><div><h3>인사업무 예정 일정</h3><p class="muted">수습기간 종료 · 계약 만료 / 향후 30일</p></div></div><div id="hrSchedule"><p class="muted">예정 일정을 불러오는 중입니다…</p></div></section>
  <div class="dashboard-chart-grid"><section class="trend-panel"><div class="trend-heading"><div><h3>월별 재직 인원 추이</h3><p class="muted">각 월 말일 기준 · 입사일과 퇴사일로 계산</p></div><div class="trend-actions"><label>조회 연도 <select id="trendYear"></select></label><button type="button" id="downloadTrendExcel" class="export-excel">엑셀 다운로드 (.xlsx)</button></div></div><div id="trendChart" class="trend-chart"><p class="muted">인원 추이를 불러오고 있습니다…</p></div></section>
  <section class="trend-panel workplace-panel"><div class="trend-heading"><div><h3>사업장별 월말 재직 인원</h3><p class="muted">오산본사 · 과천지사 비교</p></div><span id="workplaceYearLabel" class="muted"></span></div><div id="workplaceChart" class="trend-chart"><p class="muted">사업장별 인원을 불러오는 중입니다…</p></div></section></div>
  <section id="hrRecentBottom" class="hr-recent-bottom"><div class="hr-recent-heading"><h3>최근 인사 변동 내역</h3><span class="muted">입사 · 퇴사 · 사업장 이동 / 최근 5건</span></div><div id="hrRecentBottomContent"><p class="muted">인사 변동 내역을 불러오는 중입니다…</p></div></section>`;
- await Promise.all([initHeadcountTrend(),loadHrInsights(),loadHrSchedule()]);return;}
+ await Promise.all([initHeadcountTrend(),loadHrInsights()]);return;}
 if(v==='users'){if(me.role!=='admin'){throw new Error('공용 비밀번호에서는 사용자 관리 기능이 비활성화되어 있습니다.')}const d=await fetchJSON('/api/admin-users');$$('body').innerHTML=table(d.rows);return;}
 if(v==='employees'){await showAllEmployees();return;}
 if(v==='technical_staff'){await showEmployeeDirectory();return;}
@@ -451,6 +450,8 @@ async function loadHrInsights(){
  const box=$$('hrInsights');if(!box)return;
  try{
   const d=await fetchJSON('/api/hr-insights');
+  let schedule=null;let scheduleError='';
+  try{schedule=await fetchJSON('/api/hr-schedule')}catch(e){scheduleError=e.message}
   if(view!=='dashboard'||!$$('hrInsights'))return;
   const entries=Array.isArray(d.recent)?d.recent:[];
   const due=Array.isArray(d.anniversaries)?d.anniversaries:[];
@@ -458,7 +459,14 @@ async function loadHrInsights(){
   const types={hire:'입사',leave:'퇴사',transfer:'사업장 이동'};
   const dateLabel=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'')?`${s.slice(5,7)}.${s.slice(8,10)}`:escapeHTML(s||'');
   const recent=entries.length?`<div class="hr-recent-scroll"><table class="hr-recent-table"><thead><tr><th>날짜</th><th>직원</th><th>구분</th></tr></thead><tbody>${entries.map(r=>`<tr><td>${dateLabel(r.date)}</td><td>${escapeHTML(r.name)}</td><td><span class="hr-event-label hr-event-${escapeHTML(r.type)}">${types[r.type]||'기타'}${r.type==='transfer'&&r.from_workplace&&r.to_workplace?` · ${escapeHTML(String(r.from_workplace).replace(/본사$|지사$/g,''))}→${escapeHTML(String(r.to_workplace).replace(/본사$|지사$/g,''))}`:''}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">최근 인사 변동 내역이 없습니다.</p>';
-  const detail=due.length?`<details class="hr-anniversary-details"><summary>입사 1주년 예정자 ${due.length}명 상세보기</summary><div class="hr-recent-scroll"><table class="hr-recent-table"><thead><tr><th>직원</th><th>입사일</th><th>1주년 예정일</th><th>부서</th></tr></thead><tbody>${due.map(r=>`<tr><td>${escapeHTML(r.name)}</td><td>${escapeHTML(r.hire_date)}</td><td>${escapeHTML(r.anniversary_date)}</td><td>${escapeHTML(r.department||'-')}</td></tr>`).join('')}</tbody></table></div></details>`:'';
+  const scheduleEvents=Array.isArray(schedule?.events)?schedule.events:[];
+  const scheduleRows=(type)=>scheduleEvents.filter(x=>x.type===type);
+  const scheduleTable=(rows,type)=>rows.length?`<div class="hr-recent-scroll"><table class="hr-recent-table"><thead><tr><th>직원</th><th>예정일</th><th>부서</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHTML(r.name)}</td><td>${escapeHTML(r.due_date)}</td><td>${escapeHTML(r.department||'')}</td></tr>`).join('')}</tbody></table></div>`:`<p class="muted">향후 30일 이내 ${type} 예정자가 없습니다.</p>`;
+  const detail=`<details class="hr-anniversary-details hr-schedule-integrated"><summary>인사업무 예정일정 · 상세보기</summary><div class="hr-schedule-integrated-body">
+    <section class="hr-schedule-group"><h4>입사 1주년 예정자 <span>${due.length}명</span></h4>${due.length?`<div class="hr-recent-scroll"><table class="hr-recent-table"><thead><tr><th>직원</th><th>입사일</th><th>1주년 예정일</th><th>부서</th></tr></thead><tbody>${due.map(r=>`<tr><td>${escapeHTML(r.name)}</td><td>${escapeHTML(r.hire_date)}</td><td>${escapeHTML(r.anniversary_date)}</td><td>${escapeHTML(r.department||'')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">향후 30일 이내 입사 1주년 예정자가 없습니다.</p>'}</section>
+    <section class="hr-schedule-group"><h4>수습기간 종료 예정 <span>${scheduleRows('probation').length}명</span></h4>${scheduleError?`<p class="muted">일정 조회 오류: ${escapeHTML(scheduleError)}</p>`:scheduleTable(scheduleRows('probation'),'수습 종료')}</section>
+    <section class="hr-schedule-group"><h4>계약 만료 예정 <span>${scheduleRows('contract').length}명</span></h4>${scheduleError?`<p class="muted">일정 조회 오류: ${escapeHTML(scheduleError)}</p>`:scheduleTable(scheduleRows('contract'),'계약 만료')}</section>
+  </div></details>`;
   const recentBottom=$$('hrRecentBottomContent');if(recentBottom)recentBottom.innerHTML=recent;
   box.innerHTML=`<div class="hr-insight-title"><h3>인사관리 인사이트</h3><span class="muted">${escapeHTML(d.today)} 기준</span></div>
    <div class="hr-kpis">
