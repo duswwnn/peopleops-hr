@@ -282,3 +282,13 @@
 /* 관리자 로그인 상태 안내 문구는 화면에서만 숨김 (인증 로직 유지) */
 .shell > aside > p.muted { display: none !important; }
 .shell .top #identity { display: none !important; }
+
+/* 인사업무 예정 일정 */
+.hr-schedule-panel{margin:18px 0;padding:22px 24px;border:1px solid #e4e8f1;border-radius:16px;background:#fff;box-shadow:0 6px 18px rgba(19,38,65,.04)}
+.hr-schedule-head h3{margin:0 0 4px;font-size:19px}.hr-schedule-head p{margin:0 0 18px}
+.hr-schedule-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.hr-schedule-summary>div{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px;border-radius:12px;background:#f8f8fd;border:1px solid #eeedf7}
+.hr-schedule-summary span{font-size:15px;color:#52627c}.hr-schedule-summary strong{font-size:22px;color:#273a5a}
+.hr-schedule-table-wrap{overflow-x:auto}.hr-schedule-table{width:100%;border-collapse:collapse}.hr-schedule-table th{text-align:left;background:#f4f6fb;font-weight:650}.hr-schedule-table th,.hr-schedule-table td{padding:12px 15px;border-bottom:1px solid #e9ecf2}
+.hr-schedule-tag{display:inline-block;border-radius:50px;padding:5px 10px;background:#eeecfb;color:#564e99;font-size:13px;white-space:nowrap}.hr-schedule-tag.contract{background:#fff3e4;color:#92602f}
+@media(max-width:650px){.hr-schedule-panel{padding:16px}.hr-schedule-summary{grid-template-columns:1fr}}
