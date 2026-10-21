@@ -164,6 +164,18 @@ async function showAllEmployees(){
 
 // Employee editor and workbook import - same-origin API, no direct DB access from browser.
 const splitItems=s=>String(s||'').split(/\r?\n|;/).map(x=>x.trim()).filter(Boolean);
+// 수습 종료일: 입사일로부터 달력상 3개월, 말일은 해당 월 말일로 보정.
+function probationEndFromHire(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return '';
+ const [y,m,d]=value.split('-').map(Number);
+ const original=new Date(Date.UTC(y,m-1,d));
+ if(original.toISOString().slice(0,10)!==value)return '';
+ const target=new Date(Date.UTC(y,m-1+3,1));
+ const last=new Date(Date.UTC(target.getUTCFullYear(),target.getUTCMonth()+1,0)).getUTCDate();
+ target.setUTCDate(Math.min(d,last));
+ return target.toISOString().slice(0,10);
+}
+
 function editorTemplate(e={}){
  const edit=!!e.id;
  const cert=(e.certificates||[]).map(x=>x.certificate_name).join('\n');
@@ -173,7 +185,7 @@ function editorTemplate(e={}){
  return `<div class="modal-shade" id="editModal"><form class="editor-card" id="employeeForm"><div class="editor-top"><h2>${edit?'직원 정보 수정':'직원 추가'}</h2><button type="button" data-close>✕</button></div><p class="muted">자격증·기술등급·면허는 한 줄에 하나씩 입력합니다.</p>
  <div class="editor-grid"><label>사번 (중복 확인 기준)<input name="employee_no" value="${val('employee_no')}" placeholder="예: EMP001" ${edit?'readonly':''}></label><label>성명 *<input name="name" required maxlength="100" value="${val('name')}"></label>
  <label>사업장<select name="workplace"><option value="">선택</option>${['오산본사','과천지사'].map(x=>`<option value="${x}" ${e.workplace===x?'selected':''}>${x}</option>`).join('')}</select></label><label>부서<input name="department" value="${val('department')}"></label>
- <label>직책<input name="job_title" value="${val('job_title')}"></label><label>수습 종료일<input name="probation_end_date" type="date"></label><label>계약 만료일<input name="contract_end_date" type="date"></label><label>입사일<input name="hire_date" type="date" value="${val('hire_date')}"></label><label>퇴사일<input name="termination_date" type="date" value="${val('termination_date')}"></label></div>
+ <label>직책<input name="job_title" value="${val('job_title')}"></label><label>입사일<input name="hire_date" type="date" value="${val('hire_date')}"></label><label>수습 종료일 (입사일 + 3개월, 자동 계산)<input name="probation_end_date" type="date" readonly title="입사일을 변경하면 자동 반영됩니다"></label><label>계약 만료일<input name="contract_end_date" type="date"></label><label>퇴사일<input name="termination_date" type="date" value="${val('termination_date')}"></label></div>
  <div class="editor-grid"><label>국가기술자격증<textarea name="certs" placeholder="전기기사\n전기산업기사">${escapeHTML(cert)}</textarea></label><label>건설기술인 (분야 | 등급)<textarea name="grades" placeholder="전기 | 고급\n기계 | 중급">${escapeHTML(grades)}</textarea></label><label>등록 면허<textarea name="licenses" placeholder="전기공사업">${escapeHTML(licenses)}</textarea></label></div>
  <p id="editFeedback" role="status" class="error-line"></p><div class="editor-actions">${edit?'<button type="button" class="employee-delete" id="deleteEmployeeButton">직원 삭제</button>':''}<button type="button" data-close>취소</button><button class="primary" type="submit">${edit?'변경 내용 저장':'직원 등록'}</button></div></form></div>`;
 }
@@ -181,9 +193,15 @@ function setModal(html){document.getElementById('modalRoot')?.remove();const roo
 async function sendManage(payload){const r=await fetch('/api/manage',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.error||`저장 실패 (${r.status})`);return data;}
 function formEntry(form,original){const v=k=>form.elements.namedItem(k).value.trim();return {id:original?.id,employee_no:v('employee_no'),name:v('name'),workplace:v('workplace'),department:v('department'),job_title:v('job_title'),hire_date:v('hire_date'),termination_date:v('termination_date'),certificates:splitItems(v('certs')).map(certificate_name=>({certificate_name})),grades:splitItems(v('grades')).map(s=>{const [technical_field,grade]=s.split('|').map(x=>x.trim());return {technical_field,grade:grade||''}}),licenses:splitItems(v('licenses')).map(license_type=>({license_type}))};}
 function openEmployeeEditor(employee){setModal(editorTemplate(employee));const form=document.getElementById('employeeForm');
+ const hireInput=form.elements.namedItem('hire_date');
+ const probationInput=form.elements.namedItem('probation_end_date');
+ const syncProbation=()=>{probationInput.value=probationEndFromHire(hireInput.value)};
+ hireInput.addEventListener('input',syncProbation);
+ hireInput.addEventListener('change',syncProbation);
+ syncProbation();
  if(employee?.id){fetchJSON('/api/hr-schedule?employee_id='+encodeURIComponent(employee.id)).then(x=>{
   if(!form.isConnected)return;
-  form.elements.namedItem('probation_end_date').value=x.probation_end_date||'';
+  syncProbation();
   form.elements.namedItem('contract_end_date').value=x.contract_end_date||'';
  }).catch(e=>{const feedback=document.getElementById('editFeedback');if(feedback)feedback.textContent='예정 일정 조회 실패: '+e.message;});}
 
@@ -201,7 +219,7 @@ function openEmployeeEditor(employee){setModal(editorTemplate(employee));const f
 form.onsubmit=async e=>{e.preventDefault();const feedback=document.getElementById('editFeedback');const btn=form.querySelector('button[type=submit]');btn.disabled=true;try{const saved=await sendManage({action:'save',mode:employee?'update':'create',employee:formEntry(form,employee)});
  const savedId=employee?.id||saved.result?.id;
  if(!savedId)throw Error('직원 저장 결과에서 ID를 확인하지 못했습니다.');
- const scheduleResponse=await fetch('/api/hr-schedule',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({employee_id:savedId,probation_end_date:form.elements.namedItem('probation_end_date').value,contract_end_date:form.elements.namedItem('contract_end_date').value})});
+ const scheduleResponse=await fetch('/api/hr-schedule',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({employee_id:savedId,contract_end_date:form.elements.namedItem('contract_end_date').value})});
  const scheduleResult=await scheduleResponse.json().catch(()=>({}));
  if(!scheduleResponse.ok)throw Error('직원정보는 저장됐지만 예정 일정 저장에 실패했습니다: '+(scheduleResult.error||scheduleResponse.status));
  document.getElementById('modalRoot').remove();await load(view==='technical_staff'?'technical_staff':'employees');}catch(err){feedback.textContent=err.message}finally{btn.disabled=false}};}
@@ -485,6 +503,6 @@ async function loadHrSchedule(){
   const data=await fetchJSON('/api/hr-schedule');if(!$$('hrSchedule')||view!=='dashboard')return;
   const ev=data.events||[];
   const dates=ev.length?`<div class="hr-schedule-table-wrap"><table class="hr-schedule-table"><thead><tr><th>예정일</th><th>직원</th><th>부서</th><th>구분</th></tr></thead><tbody>${ev.map(x=>`<tr><td>${escapeHTML(x.due_date)}</td><td>${escapeHTML(x.name)}</td><td>${escapeHTML(x.department)}</td><td><span class="hr-schedule-tag ${x.type==='contract'?'contract':'probation'}">${x.type==='contract'?'계약 만료':'수습 종료'}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">향후 30일 내 예정된 수습 종료·계약 만료 일정이 없습니다.</p>';
-  target.innerHTML=`<div class="hr-schedule-summary"><div><span>수습기간 종료 예정</span><strong>${Number(data.probation_count)||0}명</strong></div><div><span>계약 만료 예정</span><strong>${Number(data.contract_count)||0}명</strong></div></div>${dates}<p class="muted tiny">직원명부 → 직원 수정에서 수습 종료일과 계약 만료일을 입력하면 자동 반영됩니다.</p>`;
+  target.innerHTML=`<div class="hr-schedule-summary"><div><span>수습기간 종료 예정</span><strong>${Number(data.probation_count)||0}명</strong></div><div><span>계약 만료 예정</span><strong>${Number(data.contract_count)||0}명</strong></div></div>${dates}<p class="muted tiny">수습 종료일은 입사일 기준 3개월 후로 자동 계산하며, 계약 만료일은 직원 수정에서 입력합니다.</p>`;
  }catch(e){if(target.isConnected)target.innerHTML='<p class="error">일정을 불러오지 못했습니다: '+escapeHTML(e.message)+'</p>';}
 }
