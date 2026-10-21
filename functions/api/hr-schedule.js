@@ -1,6 +1,18 @@
 import {authenticate,fail,json} from '../_lib/auth.js';
 const datePattern=/^\d{4}-\d{2}-\d{2}$/;
 function validDate(value){if(!value)return true;if(!datePattern.test(value))return false;const d=new Date(`${value}T00:00:00Z`);return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===value;}
+// 달력상 3개월이 되는 날의 전날; 해당 날짜가 없으면 그 달 말일을 기준으로 하루 전.
+function probationFromHire(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return '';
+ const [y,m,day]=value.split('-').map(Number);
+ const source=new Date(Date.UTC(y,m-1,day));
+ if(source.toISOString().slice(0,10)!==value)return '';
+ const target=new Date(Date.UTC(y,m+2,1));
+ const last=new Date(Date.UTC(target.getUTCFullYear(),target.getUTCMonth()+1,0)).getUTCDate();
+ target.setUTCDate(Math.min(day,last));
+ target.setUTCDate(target.getUTCDate()-1);
+ return target.toISOString().slice(0,10);
+}
 const headers={ 'Cache-Control':'no-store' };
 export async function onRequestGet({request,env}){
  try{
@@ -9,20 +21,20 @@ export async function onRequestGet({request,env}){
   if(id){
    const employeeId=Number(id);
    if(!Number.isSafeInteger(employeeId)||employeeId<1)return json({error:'직원 번호를 확인해 주세요.'},400);
-   const row=await env.DB.prepare('SELECT probation_end_date,contract_end_date FROM employee_hr_schedule WHERE employee_id=?').bind(employeeId).first();
-   return new Response(JSON.stringify({probation_end_date:row?.probation_end_date||'',contract_end_date:row?.contract_end_date||''}),{headers:{'Content-Type':'application/json; charset=utf-8',...headers}});
+   const row=await env.DB.prepare(`SELECT e.hire_date,s.contract_end_date FROM employees e LEFT JOIN employee_hr_schedule s ON s.employee_id=e.id WHERE e.id=?`).bind(employeeId).first();
+   return new Response(JSON.stringify({probation_end_date:probationFromHire(row?.hire_date),contract_end_date:row?.contract_end_date||''}),{headers:{'Content-Type':'application/json; charset=utf-8',...headers}});
   }
-  const results=(await env.DB.prepare(`SELECT e.id,e.name,e.employee_no,e.department,e.workplace,s.probation_end_date,s.contract_end_date
-     FROM employees e JOIN employee_hr_schedule s ON s.employee_id=e.id
+  const results=(await env.DB.prepare(`SELECT e.id,e.name,e.employee_no,e.department,e.workplace,e.hire_date,s.contract_end_date
+     FROM employees e LEFT JOIN employee_hr_schedule s ON s.employee_id=e.id
      WHERE (e.termination_date IS NULL OR e.termination_date='' OR e.termination_date>=date('now','+9 hours'))
-       AND (s.probation_end_date IS NOT NULL OR s.contract_end_date IS NOT NULL)
+       AND (e.hire_date IS NOT NULL OR s.contract_end_date IS NOT NULL)
      ORDER BY e.name COLLATE NOCASE`).all()).results||[];
   const now=new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
   const upper=new Date(`${now}T00:00:00Z`);upper.setUTCDate(upper.getUTCDate()+30);const until=upper.toISOString().slice(0,10);
   const events=[];
   for(const r of results){
    for(const [kind,field] of [['probation','probation_end_date'],['contract','contract_end_date']]){
-    const due=r[field];if(due&&due>=now&&due<=until)events.push({employee_id:r.id,name:r.name,employee_no:r.employee_no||'',department:r.department||'',workplace:r.workplace||'',type:kind,due_date:due});
+    const due=kind==='probation'?probationFromHire(r.hire_date):r[field];if(due&&due>=now&&due<=until)events.push({employee_id:r.id,name:r.name,employee_no:r.employee_no||'',department:r.department||'',workplace:r.workplace||'',type:kind,due_date:due});
    }
   }
   events.sort((a,b)=>a.due_date.localeCompare(b.due_date)||a.name.localeCompare(b.name,'ko'));
@@ -36,13 +48,13 @@ export async function onRequestPost({request,env}){
   if(!(request.headers.get('Content-Type')||'').includes('application/json'))return json({error:'JSON만 허용합니다.'},415);
   const body=await request.json();const id=Number(body.employee_id);
   if(!Number.isSafeInteger(id)||id<1)return json({error:'직원 번호를 확인해 주세요.'},400);
-  const probation=String(body.probation_end_date||'').trim();const contract=String(body.contract_end_date||'').trim();
-  if(!validDate(probation)||!validDate(contract))return json({error:'날짜를 올바르게 입력해 주세요.'},400);
+  const contract=String(body.contract_end_date||'').trim();
+  if(!validDate(contract))return json({error:'날짜를 올바르게 입력해 주세요.'},400);
   const emp=await env.DB.prepare('SELECT id FROM employees WHERE id=?').bind(id).first();
   if(!emp)return json({error:'직원을 찾을 수 없습니다.'},404);
   await env.DB.prepare(`INSERT INTO employee_hr_schedule(employee_id,probation_end_date,contract_end_date,updated_at)
    VALUES(?,?,?,CURRENT_TIMESTAMP)
-   ON CONFLICT(employee_id) DO UPDATE SET probation_end_date=excluded.probation_end_date,contract_end_date=excluded.contract_end_date,updated_at=CURRENT_TIMESTAMP`).bind(id,probation||null,contract||null).run();
+   ON CONFLICT(employee_id) DO UPDATE SET probation_end_date=excluded.probation_end_date,contract_end_date=excluded.contract_end_date,updated_at=CURRENT_TIMESTAMP`).bind(id,null,contract||null).run();
   return json({ok:true});
  }catch(e){return fail(e);}
 }
