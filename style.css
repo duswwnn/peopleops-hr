@@ -302,3 +302,6 @@
 .hr-schedule-group h4 span{color:#706bc0;font-weight:600}
 .hr-schedule-group .hr-recent-scroll{margin-top:0}
 .hr-schedule-group>.muted{margin:8px 0 0}
+
+/* 인사업무 예정일정 상세보기: 월별 인원 상세표 보기와 동일한 글씨 스타일 */
+.hr-schedule-integrated > summary {font-size:16px;line-height:normal;font-weight:600;color:#235a96;cursor:pointer;padding:10px 0;}
