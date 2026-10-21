@@ -75,11 +75,12 @@ function sortEmployeesByHireDate(rows){
   return an.localeCompare(bn,'ko',{numeric:true,sensitivity:'base'});
  });
 }
-function filterAllEmployees(rows,q='',site='',status=''){
+function filterAllEmployees(rows,q='',site='',status='',department=''){
  const today=new Date().toLocaleDateString('en-CA');
  return sortEmployeesByHireDate(rows.filter(r=>{
   if(q&&!String([r.employee_no,r.name,r.department,r.job_title].join(' ')).toLowerCase().includes(q))return false;
   if(site&&r.workplace!==site)return false;
+  if(department&&clean(r.department)!==department)return false;
   const active=(!r.hire_date||r.hire_date<=today)&&(!r.termination_date||r.termination_date>today);
   return !status||(status==='active'?active:!active&&!!r.termination_date&&r.termination_date<=today);
  }));
@@ -146,14 +147,14 @@ async function showEmployeeDirectory(){
 async function showAllEmployees(){
  const d=await fetchJSON('/api/directory');
  directoryRows=d.rows||[];
- $$('body').innerHTML=`<section class="directory all-employees"><div class="directory-head"><div><p class="muted">자격증 보유 여부와 관계없이 전체 직원을 관리합니다. 종합 대시보드 인원 집계 기준입니다.</p></div><div class="directory-actions"><button id="allAdd" class="primary">+ 직원 추가</button><button id="allImport">엑셀 일괄 업로드</button><button id="allExportAll" type="button" class="export-excel">전체 엑셀 다운로드</button><button id="allExportFiltered" type="button" class="export-excel">조회 결과 다운로드</button></div></div><div class="directory-filters"><label>직원 검색<input id="allSearch" type="search" placeholder="사번·성명·부서 검색"></label><label>사업장<select id="allWorkplace"><option value="">전체</option><option>오산본사</option><option>과천지사</option></select></label><label>재직 상태<select id="allStatus"><option value="">전체</option><option value="active">재직</option><option value="former">퇴사</option></select></label></div><p id="allCount" class="muted"></p><div id="allResult" class="excel-scroll"></div></section>`;
+ $$('body').innerHTML=`<section class="directory all-employees"><div class="directory-head"><div><p class="muted">자격증 보유 여부와 관계없이 전체 직원을 관리합니다. 종합 대시보드 인원 집계 기준입니다.</p></div><div class="directory-actions"><button id="allAdd" class="primary">+ 직원 추가</button><button id="allImport">엑셀 일괄 업로드</button><button id="allExportAll" type="button" class="export-excel">전체 엑셀 다운로드</button><button id="allExportFiltered" type="button" class="export-excel">조회 결과 다운로드</button></div></div><div class="directory-filters"><label>직원 검색<input id="allSearch" type="search" placeholder="사번·성명 검색"></label><label>사업장<select id="allWorkplace"><option value="">전체</option><option>오산본사</option><option>과천지사</option></select></label><label>부서<select id="allDepartment"><option value="">전체</option>${uniqOpts(directoryRows,r=>[r.department]).map(x=>`<option value="${escapeHTML(x)}">${escapeHTML(x)}</option>`).join('')}</select></label><label>재직 상태<select id="allStatus"><option value="">전체</option><option value="active">재직</option><option value="former">퇴사</option></select></label></div><p id="allCount" class="muted"></p><div id="allResult" class="excel-scroll"></div></section>`;
  const draw=()=>{
-  const q=clean($$('allSearch').value).toLowerCase(),site=$$('allWorkplace').value,status=$$('allStatus').value;
-  const rows=filterAllEmployees(directoryRows,q,site,status);
+  const q=clean($$('allSearch').value).toLowerCase(),site=$$('allWorkplace').value,status=$$('allStatus').value,department=$$('allDepartment').value;
+  const rows=filterAllEmployees(directoryRows,q,site,status,department);
   $$('allCount').textContent=`조회 ${rows.length}명 / 전체 ${directoryRows.length}명`;
   $$('allResult').innerHTML=`<table class="excel-directory all-staff-table"><thead><tr><th>사번</th><th>사업장</th><th>부서</th><th>직책</th><th>성명</th><th>입사일</th><th>퇴사일</th><th>자격증</th><th>사업장 이동</th><th>정보 수정</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr><td>${textOrDash(r.employee_no)}</td><td>${textOrDash(r.workplace)}</td><td>${textOrDash(r.department)}</td><td>${textOrDash(r.job_title)}</td><td>${escapeHTML(r.name)}</td><td>${textOrDash(r.hire_date)}</td><td>${textOrDash(r.termination_date)}</td><td>${r.certificates?.length||0}건</td><td><button class="employee-link" data-transfer-id="${r.id}">이력 관리</button></td><td><button class="employee-link" data-edit-id="${r.id}">수정</button></td></tr>`).join(''):'<tr><td colspan="10">조회된 직원이 없습니다.</td></tr>'}</tbody></table>`;
  };
- ['allSearch','allWorkplace','allStatus'].forEach(id=>$$ (id).addEventListener(id==='allSearch'?'input':'change',draw));
+ ['allSearch','allWorkplace','allDepartment','allStatus'].forEach(id=>$$ (id).addEventListener(id==='allSearch'?'input':'change',draw));
  $$('allAdd').onclick=()=>openEmployeeEditor();$$('allImport').onclick=openImportModal;
  $$('allExportAll').onclick=()=>exportPeopleOpsExcel('employees',false,$$('allExportAll'));
  $$('allExportFiltered').onclick=()=>exportPeopleOpsExcel('employees',true,$$('allExportFiltered'));
@@ -285,7 +286,7 @@ async function exportPeopleOpsExcel(mode,filtered,button){
   const d=await fetchJSON('/api/directory');
   let rows=d.rows||[];
   if(mode==='employees'){
-   rows=filtered?filterAllEmployees(rows,clean($$('allSearch')?.value).toLowerCase(),$$('allWorkplace')?.value||'', $$('allStatus')?.value||''):sortEmployeesByHireDate(rows);
+   rows=filtered?filterAllEmployees(rows,clean($$('allSearch')?.value).toLowerCase(),$$('allWorkplace')?.value||'', $$('allStatus')?.value||'', $$('allDepartment')?.value||''):sortEmployeesByHireDate(rows);
   }else{
    const q=filtered?clean($$('dirSearch')?.value).toLowerCase():'';
    const keys=['workplace','department','grade','field','certificate','license'];
