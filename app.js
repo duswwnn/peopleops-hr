@@ -492,7 +492,7 @@ async function loadHrInsights(){
     ${metric('올해 입사자',`${Number(d.hires)||0}명`,'1월~현재','↗')}
     ${metric('올해 퇴사자',`${Number(d.leaves)||0}명`,'1월~현재','↘')}
     ${metric('올해 사업장 이동',`${Number(d.transfers)||0}건`,'오산 ↔ 과천','⇄')}
-    ${metric('입사 1주년 예정',`${due.length}명`,'향후 30일 이내','◷')}
+    ${metric('인사업무 예정일정',`${due.length + scheduleRows('probation').length + scheduleRows('contract').length}건`,'향후 30일 이내 · 3개 일정 합계','◷')}
    </div>${detail}`;
  }catch(err){if($$('hrInsights'))$$('hrInsights').innerHTML=`<p class="muted">인사관리 인사이트를 불러오지 못했습니다: ${escapeHTML(err.message)}</p>`;if($$('hrRecentBottomContent'))$$('hrRecentBottomContent').innerHTML=`<p class="muted">인사 변동 내역을 불러오지 못했습니다.</p>`;}
 }
