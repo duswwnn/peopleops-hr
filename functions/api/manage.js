@@ -47,6 +47,7 @@ async function deleteEmployee(db, data){
  if(!data.confirm_name||String(data.confirm_name).trim()!==String(employee.name).trim())return json({error:'삭제 확인을 위한 직원 이름이 일치하지 않습니다.'},400);
  // Delete dependent records first to satisfy foreign keys; transactionality provided by D1 batch.
  const statements=[
+  db.prepare('DELETE FROM employee_hr_schedule WHERE employee_id=?').bind(id),
   db.prepare('DELETE FROM workplace_transfers WHERE employee_id=?').bind(id),
   db.prepare('DELETE FROM certificates WHERE employee_id=?').bind(id),
   db.prepare('DELETE FROM technical_grades WHERE employee_id=?').bind(id),
